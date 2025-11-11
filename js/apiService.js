@@ -1,21 +1,5 @@
-export async function streamGeminiResponse(apiKey, history, userInput, onChunk) {
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}`;
-
-    const contents = history.map(msg => ({
-        role: msg.role,
-        parts: [{ text: msg.content }],
-    }));
-    contents.push({
-        role: 'user',
-        parts: [{ text: userInput }],
-    });
-
-    const requestBody = {
-        contents: contents,
-        systemInstruction: {
-            parts: [{ text: 'You are a helpful assistant named Goug. Your responses should be in Persian.' }]
-        }
-    };
+export async function streamGeminiResponse(apiKey, requestBody, onChunk) {
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}&alt=sse`;
 
     try {
         const response = await fetch(API_URL, {
@@ -31,34 +15,36 @@ export async function streamGeminiResponse(apiKey, history, userInput, onChunk) 
             throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
         }
 
-        // Gemini API به صورت stream نمی‌فرستد، بلکه یکجا می‌فرستد
-        // پس تمام متن را می‌خوانیم
-        const text = await response.text();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
 
-        // پاسخ یک آرایه JSON است: [{...}]
-        try {
-            const jsonArray = JSON.parse(text);
-            
-            // اگر آرایه است
-            if (Array.isArray(jsonArray)) {
-                for (const item of jsonArray) {
-                    const content = item.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (content) {
-                        // برای simulate کردن streaming، متن را کاراکتر به کاراکتر می‌فرستیم
-                        // یا اگر نمی‌خواهید این کار را کند، یکجا بفرستید
-                        onChunk(content);
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+                break;
+            }
+
+            const chunkText = decoder.decode(value);
+            // The response is a stream of server-sent events (SSE). We need to parse them.
+            // Each data block is prefixed with "data: ".
+            const lines = chunkText.split('\n');
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const jsonStr = line.substring(6); // Remove "data: "
+                        if (jsonStr) {
+                           const parsed = JSON.parse(jsonStr);
+                           const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                           if (content) {
+                                onChunk(content);
+                           }
+                        }
+                    } catch (e) {
+                        // Ignore parsing errors for incomplete JSON chunks
+                        console.warn("Could not parse stream chunk:", line);
                     }
                 }
-            } else {
-                // اگر object است
-                const content = jsonArray.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (content) {
-                    onChunk(content);
-                }
             }
-        } catch (parseError) {
-            console.error("خطا در پارس JSON:", parseError);
-            throw new Error('پاسخ نامعتبر از API');
         }
 
     } catch (error) {
