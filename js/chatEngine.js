@@ -89,13 +89,19 @@ class ChatEngine extends EventEmitter {
             this.emit('streamEnd', fullResponse);
 
         } catch (error) {
-            const errorMessage = `خطا: ${error.message}`;
-            this.emit('error', errorMessage);
-            // Replace the empty model message with an error message in the state
-            if (this.messages.length > 0) {
-                 this.messages[this.messages.length - 1].content = errorMessage;
+            const errorMessage = error.message || 'یک خطای ناشناخته رخ داد.';
+            
+            // پیام مدل که برای استریم اضافه شده بود را حذف کن
+            // و UI را برای حذف عنصر آن مطلع کن
+            if (this.messages.length > 0 && this.messages[this.messages.length - 1].role === 'model') {
+                this.messages.pop();
+                this.emit('messageRemoved');
             }
-            this.emit('streamEnd', errorMessage); // End stream with error
+            
+            this.emit('error', errorMessage);
+            this.emit('streamEnd'); // برای اطمینان از پایان یافتن حالت استریم در UI
+            Storage.saveMessages(this.messages); // تاریخچه را بدون پیام ناموفق ذخیره کن
+
         } finally {
             this.setLoading(false);
         }

@@ -57,7 +57,8 @@ class ChatUI {
         this.engine.on('message', this.appendMessage.bind(this));
         this.engine.on('chunk', this.appendChunkToLastMessage.bind(this));
         this.engine.on('streamEnd', () => (this.lastModelMessageElement = null));
-        this.engine.on('error', (error) => alert(error));
+        this.engine.on('messageRemoved', this.removeLastMessage.bind(this));
+        this.engine.on('error', this.displayTemporaryError.bind(this));
     }
     
     // --- Event Handlers ---
@@ -130,6 +131,41 @@ class ChatUI {
             this.lastModelMessageElement.textContent += chunk;
             this.scrollToBottom();
         }
+    }
+
+    /**
+     * آخرین پیام (معمولاً placeholder مدل) را از لیست پیام‌ها حذف می‌کند.
+     */
+    removeLastMessage() {
+        if (this.messageList.lastChild) {
+            this.messageList.removeChild(this.messageList.lastChild);
+            this.lastModelMessageElement = null;
+        }
+    }
+
+    /**
+     * یک پیام خطا را به صورت موقت در UI نمایش می‌دهد.
+     * @param {string} errorMessage - پیام خطا برای نمایش.
+     */
+    displayTemporaryError(errorMessage) {
+        const errorWrapper = document.createElement('div');
+        errorWrapper.className = 'error-message-wrapper';
+
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'error-message-bubble';
+        errorBubble.textContent = errorMessage;
+
+        errorWrapper.appendChild(errorBubble);
+        this.messageList.appendChild(errorWrapper);
+        this.scrollToBottom();
+
+        // حذف پیام خطا پس از 5 ثانیه
+        setTimeout(() => {
+            errorWrapper.style.opacity = '0';
+            errorWrapper.addEventListener('transitionend', () => {
+                errorWrapper.remove();
+            });
+        }, 5000);
     }
 
     scrollToBottom() {
