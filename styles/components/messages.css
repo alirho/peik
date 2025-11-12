@@ -74,7 +74,6 @@ html.dark .message-label {
     border-radius: 0.75rem;
     font-size: 1rem;
     line-height: 1.6;
-    white-space: pre-wrap;
     word-wrap: break-word;
 }
 
@@ -92,6 +91,7 @@ html.dark .message.assistant .message-bubble {
     background-color: var(--color-primary);
     border-bottom-right-radius: 0; /* Tail on the right for RTL */
     color: white;
+    white-space: pre-wrap;
 }
 
 @media (max-width: 768px) {
