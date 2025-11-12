@@ -11,14 +11,29 @@ class ChatUI {
     cacheDOMElements() {
         this.settingsModal = document.getElementById('settings-modal');
         this.settingsForm = document.getElementById('settings-form');
-        this.apiKeyInput = document.getElementById('api-key-input');
-        this.modelNameInput = document.getElementById('model-name-input');
-        this.endpointUrlGroup = document.getElementById('endpoint-url-group');
-        this.endpointUrlInput = document.getElementById('endpoint-url-input');
-        this.providerRadios = this.settingsForm.elements['provider'];
-        this.editSettingsButton = document.getElementById('edit-settings-button');
+        this.cancelSettingsButton = document.getElementById('cancel-settings-button');
+        
+        // Gemini fields
+        this.geminiModelInput = document.getElementById('gemini-model-input');
+        this.geminiKeyInput = document.getElementById('gemini-key-input');
+        this.geminiKeyToggle = document.getElementById('gemini-key-toggle');
+
+        // ChatGPT fields
+        this.chatgptModelInput = document.getElementById('chatgpt-model-input');
+        this.chatgptKeyInput = document.getElementById('chatgpt-key-input');
+        this.chatgptKeyToggle = document.getElementById('chatgpt-key-toggle');
+
+        // Custom fields
+        this.customModelInput = document.getElementById('custom-model-input');
+        this.customKeyInput = document.getElementById('custom-key-input');
+        this.customKeyToggle = document.getElementById('custom-key-toggle');
+        this.customEndpointInput = document.getElementById('custom-endpoint-input');
         
         this.appContainer = document.getElementById('app-container');
+        this.editSettingsButton = document.getElementById('edit-settings-button');
+        this.sidebar = document.querySelector('.sidebar');
+        this.menuToggleButton = document.getElementById('menu-toggle-button');
+
         this.messageList = document.getElementById('message-list');
         this.chatForm = document.getElementById('chat-form');
         this.messageInput = document.getElementById('message-input');
@@ -40,6 +55,15 @@ class ChatUI {
         this.chatForm.addEventListener('submit', this.handleSendMessage.bind(this));
         this.settingsForm.addEventListener('submit', this.handleSettingsSave.bind(this));
         this.editSettingsButton.addEventListener('click', () => this.showSettingsModal(true));
+        this.cancelSettingsButton.addEventListener('click', () => this.showSettingsModal(false));
+        this.menuToggleButton.addEventListener('click', this.toggleSidebar.bind(this));
+        
+        // Password visibility toggles
+        this.geminiKeyToggle.addEventListener('click', () => this.togglePasswordVisibility(this.geminiKeyInput, this.geminiKeyToggle));
+        this.chatgptKeyToggle.addEventListener('click', () => this.togglePasswordVisibility(this.chatgptKeyInput, this.chatgptKeyToggle));
+        this.customKeyToggle.addEventListener('click', () => this.togglePasswordVisibility(this.customKeyInput, this.customKeyToggle));
+
+
         this.messageInput.addEventListener('input', this.handleTextareaInput.bind(this));
         this.messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -47,11 +71,6 @@ class ChatUI {
                 this.chatForm.requestSubmit();
             }
         });
-        
-        // Listener for provider change
-        for (const radio of this.providerRadios) {
-            radio.addEventListener('change', this.handleProviderChange.bind(this));
-        }
     }
 
     /**
@@ -60,7 +79,9 @@ class ChatUI {
     bindEngineEvents() {
         this.engine.on('init', ({ settings, messages }) => {
             this.showSettingsModal(!settings || !settings.apiKey);
-            this.renderHistory(messages);
+            if (settings && messages.length > 0) {
+                this.renderHistory(messages);
+            }
         });
         this.engine.on('settingsSaved', () => this.showSettingsModal(false));
         this.engine.on('loading', this.toggleLoading.bind(this));
@@ -77,6 +98,10 @@ class ChatUI {
         e.preventDefault();
         const userInput = this.messageInput.value.trim();
         if (userInput) {
+            // Clear welcome message on first user message if it exists
+            if (this.engine.messages.length === 0) {
+                this.messageList.innerHTML = '';
+            }
             this.engine.sendMessage(userInput);
             this.messageInput.value = '';
             this.handleTextareaInput();
@@ -85,42 +110,56 @@ class ChatUI {
 
     handleSettingsSave(e) {
         e.preventDefault();
-        const provider = this.providerRadios.value;
-        const apiKey = this.apiKeyInput.value.trim();
-        const modelName = this.modelNameInput.value.trim();
         
-        let endpointUrl = null;
-        if (provider === 'custom') {
-            endpointUrl = this.endpointUrlInput.value.trim();
-            // Simple validation
-            if (!endpointUrl || !endpointUrl.startsWith('http')) {
-                this.displayTemporaryError('لطفاً یک آدرس API معتبر برای حالت سفارشی وارد کنید.');
+        const geminiModel = this.geminiModelInput.value.trim();
+        const geminiKey = this.geminiKeyInput.value.trim();
+        const chatgptModel = this.chatgptModelInput.value.trim();
+        const chatgptKey = this.chatgptKeyInput.value.trim();
+        const customModel = this.customModelInput.value.trim();
+        const customKey = this.customKeyInput.value.trim(); // Key can be optional
+        const customEndpoint = this.customEndpointInput.value.trim();
+
+        let settingsToSave = null;
+
+        // Save based on the first section that is filled
+        if (geminiModel && geminiKey) {
+            settingsToSave = { provider: 'gemini', modelName: geminiModel, apiKey: geminiKey };
+        } else if (chatgptModel && chatgptKey) {
+            settingsToSave = { provider: 'openai', modelName: chatgptModel, apiKey: chatgptKey };
+        } else if (customModel && customEndpoint) {
+            if (!customEndpoint.startsWith('http')) {
+                alert('لطفاً یک آدرس API معتبر برای حالت سفارشی وارد کنید.');
                 return;
             }
+            settingsToSave = { provider: 'custom', modelName: customModel, apiKey: customKey, endpointUrl: customEndpoint };
+        } else {
+            alert('لطفاً حداقل اطلاعات یکی از ارائه‌دهندگان را به طور کامل وارد کنید.');
+            return;
         }
-        
-        if (apiKey && modelName) {
-            this.engine.saveSettings({ provider, apiKey, modelName, endpointUrl });
-        }
-    }
 
-    handleProviderChange() {
-        const provider = this.providerRadios.value;
-        this.endpointUrlGroup.classList.toggle('hidden', provider !== 'custom');
-        // For custom provider, the endpoint is required
-        this.endpointUrlInput.required = (provider === 'custom');
-
-        // پیشنهاد نام مدل بر اساس ارائه‌دهنده
-        if(provider === 'gemini' && !this.modelNameInput.value.includes('gemini')) {
-            this.modelNameInput.value = 'gemini-2.5-flash';
-        } else if (provider === 'openai' && !this.modelNameInput.value.includes('gpt')) {
-            this.modelNameInput.value = 'gpt-4';
+        if (settingsToSave) {
+            this.engine.saveSettings(settingsToSave);
         }
     }
 
     handleTextareaInput() {
         this.messageInput.style.height = 'auto';
         this.messageInput.style.height = `${this.messageInput.scrollHeight}px`;
+    }
+    
+    toggleSidebar() {
+        this.sidebar.classList.toggle('open');
+    }
+
+    togglePasswordVisibility(inputElement, buttonElement) {
+        const icon = buttonElement.querySelector('.material-symbols-outlined');
+        if (inputElement.type === 'password') {
+            inputElement.type = 'text';
+            icon.textContent = 'visibility_off';
+        } else {
+            inputElement.type = 'password';
+            icon.textContent = 'visibility';
+        }
     }
 
     // --- DOM Rendering ---
@@ -131,7 +170,7 @@ class ChatUI {
         if (isLoading) {
             this.sendButton.innerHTML = `<div class="spinner"></div>`;
         } else {
-            this.sendButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>`;
+            this.sendButton.innerHTML = `<span class="material-symbols-outlined">send</span>`;
         }
     }
     
@@ -140,30 +179,43 @@ class ChatUI {
         this.appContainer.classList.toggle('hidden', show);
         if(show) {
             this.populateSettingsForm();
-            this.apiKeyInput.focus();
+        } else if (this.engine.messages.length === 0) {
+             this.messageList.innerHTML = this.createWelcomeMessage();
         }
     }
 
-    /**
-     * فرم تنظیمات را با مقادیر ذخیره شده پر می‌کند
-     */
     populateSettingsForm() {
+        // Clear all fields first
+        this.geminiModelInput.value = '';
+        this.geminiKeyInput.value = '';
+        this.chatgptModelInput.value = '';
+        this.chatgptKeyInput.value = '';
+        this.customModelInput.value = '';
+        this.customKeyInput.value = '';
+        this.customEndpointInput.value = '';
+
         const settings = this.engine.settings;
         if (settings) {
-            this.providerRadios.value = settings.provider || 'gemini';
-            this.apiKeyInput.value = settings.apiKey || '';
-            this.modelNameInput.value = settings.modelName || '';
-            this.endpointUrlInput.value = settings.endpointUrl || '';
+            switch(settings.provider) {
+                case 'gemini':
+                    this.geminiModelInput.value = settings.modelName || '';
+                    this.geminiKeyInput.value = settings.apiKey || '';
+                    break;
+                case 'openai':
+                    this.chatgptModelInput.value = settings.modelName || '';
+                    this.chatgptKeyInput.value = settings.apiKey || '';
+                    break;
+                case 'custom':
+                    this.customModelInput.value = settings.modelName || '';
+                    this.customKeyInput.value = settings.apiKey || '';
+                    this.customEndpointInput.value = settings.endpointUrl || '';
+                    break;
+            }
         } else {
-             // Set defaults for a fresh start
-            this.providerRadios.value = 'gemini';
-            this.modelNameInput.value = 'gemini-2.5-flash';
+            // Default placeholder if no settings exist
+            this.geminiModelInput.value = 'gemini-2.5-flash';
         }
-
-        // Trigger change to show/hide relevant fields
-        this.handleProviderChange();
     }
-
 
     renderHistory(messages) {
         this.messageList.innerHTML = '';
@@ -175,7 +227,6 @@ class ChatUI {
         if (message.role === 'model') {
             this.lastModelMessageElement = messageElement.querySelector('.message-bubble');
             if (message.content.length === 0) {
-                // This is a new, empty model message for streaming
                 this.lastModelMessageElement.innerHTML = this.createTypingIndicator();
             }
         }
@@ -185,7 +236,6 @@ class ChatUI {
 
     appendChunkToLastMessage(chunk) {
         if (this.lastModelMessageElement) {
-            // First chunk replaces the typing indicator
             if (this.lastModelMessageElement.querySelector('.typing-indicator')) {
                 this.lastModelMessageElement.innerHTML = '';
             }
@@ -194,9 +244,6 @@ class ChatUI {
         }
     }
 
-    /**
-     * آخرین پیام (معمولاً placeholder مدل) را از لیست پیام‌ها حذف می‌کند.
-     */
     removeLastMessage() {
         if (this.messageList.lastChild) {
             this.messageList.removeChild(this.messageList.lastChild);
@@ -204,33 +251,24 @@ class ChatUI {
         }
     }
 
-    /**
-     * یک پیام خطا را به صورت موقت در UI نمایش می‌دهد.
-     * @param {string} errorMessage - پیام خطا برای نمایش.
-     */
     displayTemporaryError(errorMessage) {
         const errorWrapper = document.createElement('div');
         errorWrapper.className = 'error-message-wrapper';
-
         const errorBubble = document.createElement('div');
         errorBubble.className = 'error-message-bubble';
         errorBubble.textContent = errorMessage;
-
         errorWrapper.appendChild(errorBubble);
         this.messageList.appendChild(errorWrapper);
         this.scrollToBottom();
 
-        // حذف پیام خطا پس از 5 ثانیه
         setTimeout(() => {
             errorWrapper.style.opacity = '0';
-            errorWrapper.addEventListener('transitionend', () => {
-                errorWrapper.remove();
-            });
+            errorWrapper.addEventListener('transitionend', () => errorWrapper.remove());
         }, 5000);
     }
 
     scrollToBottom() {
-        const container = document.getElementById('chat-container');
+        const container = document.querySelector('.chat-area');
         container.scrollTop = container.scrollHeight;
     }
 
@@ -238,39 +276,50 @@ class ChatUI {
     
     createMessageElement(message) {
         const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${message.role}`;
-
-        const icon = this.createIconElement(message.role);
+        wrapper.className = `message ${message.role === 'user' ? 'user' : 'assistant'}`;
+    
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+    
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'message-content';
+    
+        const label = document.createElement('p');
+        label.className = 'message-label';
+        label.textContent = message.role === 'user' ? 'شما' : 'دستیار هوش مصنوعی';
+    
         const bubble = document.createElement('div');
-        bubble.className = `message-bubble ${message.role}`;
+        bubble.className = 'message-bubble';
         bubble.textContent = message.content;
-        
+    
+        contentWrapper.append(label, bubble);
+    
+        // In an RTL layout with `display: flex`, the first DOM element is placed on the right.
         if (message.role === 'user') {
-            wrapper.append(bubble, icon);
+            // User messages: Visual order [bubble] [avatar]. DOM order needs to be [avatar] [bubble].
+            wrapper.append(avatar, contentWrapper);
         } else {
-            wrapper.append(icon, bubble);
+            // Assistant messages: Visual order [avatar] [bubble]. DOM order needs to be [bubble] [avatar].
+            wrapper.append(contentWrapper, avatar);
         }
+    
         return wrapper;
-    }
-
-    createIconElement(role) {
-        const iconWrapper = document.createElement('div');
-        iconWrapper.className = `message-icon ${role}`;
-        const userSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>`;
-        const modelSVG = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>`;
-        iconWrapper.innerHTML = role === 'user' ? userSVG : modelSVG;
-        return iconWrapper;
     }
     
     createTypingIndicator() {
-        return `
-            <div class="typing-indicator">
-                <div class="dot-container">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
+        return `<div class="typing-indicator"><div class="dot-container"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+    }
+
+    createWelcomeMessage() {
+        return `<div class="message assistant">
+            <div class="message-content">
+                <p class="message-label">دستیار هوش مصنوعی</p>
+                <div class="message-bubble">
+                    سلام! امروز چطور می‌توانم به شما کمک کنم؟
                 </div>
-            </div>`;
+            </div>
+            <div class="message-avatar"></div>
+        </div>`;
     }
 }
 
