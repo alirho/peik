@@ -12,9 +12,14 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, opacity 0.2s;
     white-space: nowrap;
     overflow: hidden;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .btn-secondary {
@@ -25,10 +30,10 @@ html.dark .btn-secondary {
     background-color: var(--hover-dark);
     color: var(--text-secondary-dark);
 }
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
     background-color: #cbd5e1;
 }
-html.dark .btn-secondary:hover {
+html.dark .btn-secondary:hover:not(:disabled) {
     background-color: #475569;
 }
 
@@ -37,7 +42,7 @@ html.dark .btn-secondary:hover {
     color: white;
     font-weight: 700;
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     background-color: var(--color-primary-hover);
 }
 
@@ -45,7 +50,7 @@ html.dark .btn-secondary:hover {
     background-color: #ef4444;
     color: white;
 }
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
     background-color: #dc2626;
 }
 
