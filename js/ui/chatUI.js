@@ -25,6 +25,7 @@ class ChatUI {
             messageInput: null,
             sendButton: null,
             messageList: null,
+            newChatButton: null,
         };
     }
 
@@ -63,6 +64,7 @@ class ChatUI {
         this.dom.messageInput = document.getElementById('message-input');
         this.dom.sendButton = document.getElementById('send-button');
         this.dom.messageList = document.getElementById('message-list');
+        this.dom.newChatButton = document.getElementById('new-chat-button');
     }
 
     /**
@@ -114,6 +116,11 @@ class ChatUI {
         this.engine.on('messageRemoved', () => {
             this.messageRenderer.removeLastMessage();
         });
+
+        this.engine.on('newChatStarted', () => {
+            this.messageRenderer.clearMessages();
+            this.messageRenderer.showWelcomeMessage();
+        });
     }
 
     /**
@@ -131,6 +138,8 @@ class ChatUI {
                 this.handleSendMessage();
             }
         });
+        
+        this.dom.newChatButton.addEventListener('click', () => this.handleNewChat());
         
         // Auto-resize textarea
         this.dom.messageInput.addEventListener('input', () => {
@@ -159,6 +168,15 @@ class ChatUI {
             this.dom.messageInput.value = '';
             this.dom.messageInput.style.height = 'auto'; // Reset height
             this.dom.messageInput.focus();
+        }
+    }
+
+    /**
+     * Handles the click on the 'New Chat' button.
+     */
+    handleNewChat() {
+        if (confirm('آیا مطمئن هستید؟ تاریخچه چت فعلی پاک خواهد شد.')) {
+            this.engine.startNewChat();
         }
     }
     

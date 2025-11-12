@@ -42,6 +42,15 @@ class ChatEngine extends EventEmitter {
     }
 
     /**
+     * Clears the current chat history and starts a new session.
+     */
+    startNewChat() {
+        this.messages = [];
+        Storage.saveMessages([]); // Clear storage
+        this.emit('newChatStarted');
+    }
+
+    /**
      * Handles sending a message by delegating to the appropriate provider.
      * @param {string} userInput The text message from the user.
      */

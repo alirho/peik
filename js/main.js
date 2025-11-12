@@ -4,7 +4,7 @@ import ChatUI from './ui/chatUI.js';
 /**
  * Initializes the application when the DOM is fully loaded.
  */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const rootElement = document.getElementById('root');
     if (!rootElement) {
         console.error('Fatal Error: Root element #root not found.');
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatEngine = new ChatEngine();
     const chatUI = new ChatUI(chatEngine, rootElement);
 
-    // Initialize both components
-    chatUI.init();
+    // Ensure the UI is fully initialized before the engine starts emitting events
+    await chatUI.init();
     chatEngine.init();
 });
