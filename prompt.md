@@ -323,3 +323,21 @@ goug/
 
 ### پرامپت ۲۷
 خب بخش لوگوی «گوگ» را هم برگردون.
+
+### پرامپت ۲۸
+در چند جا از پروژه، محتوای دریافتی از کاربر یا API به صورت مستقیم در HTML قرار می‌گیرد که می‌تواند باعث حملات XSS شود.
+1. فایل: `js/ui/components/sidebarManager.js`
+    - در متد `handleRename`:
+       - خط مربوط به `bodyHtml` که مقدار `chat.title` را در attribute قرار می‌دهد
+       - راه‌حل: مقدار را بعد از ساخت input تنظیم کن، نه در HTML
+    - در متد `handleDelete`:
+       - خط مربوط به `bodyHtml` که `chat.title` را در تگ `<strong>` قرار می‌دهد
+       - راه‌حل: ابتدا یک تابع کمکی برای escape کردن HTML بنویس و از آن استفاده کن
+یک متد به نام `escapeHtml` به کلاس `SidebarManager` اضافه کن که متن را از کاراکترهای خطرناک HTML پاک کند.
+2. فایل: `js/ui/components/messageRenderer.js`
+    - در متد `displayTemporaryError`:
+       - خط استفاده از `innerHTML` برای نمایش `errorMessage`
+       - راه‌حل: از `textContent` استفاده کن یا المان را به صورت دستی بساز
+
+> پرامپت بالایی پس از بررسی کدها توسط مدل sonnet نوشته شده است.
+

@@ -151,10 +151,19 @@ class SidebarManager {
         }
     }
 
+    _escapeHtml(str) {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     handleRename(chat) {
         this.showConfirmationModal({
             title: 'تغییر نام گپ',
-            bodyHtml: `<input id="rename-input" class="form-input" type="text" value="${chat.title}" placeholder="نام جدید گپ..." style="text-align: right; direction: rtl;">`,
+            bodyHtml: `<input id="rename-input" class="form-input" type="text" placeholder="نام جدید گپ..." style="text-align: right; direction: rtl;">`,
             confirmText: 'ذخیره',
             onConfirm: () => {
                 const input = document.getElementById('rename-input');
@@ -164,12 +173,19 @@ class SidebarManager {
                 }
             }
         });
+
+        // Securely set the input value after it has been rendered
+        const renameInput = document.getElementById('rename-input');
+        if (renameInput) {
+            renameInput.value = chat.title;
+        }
     }
     
     handleDelete(chat) {
+        const safeTitle = this._escapeHtml(chat.title);
         this.showConfirmationModal({
             title: 'حذف گپ',
-            bodyHtml: `<p>آیا از حذف گپ «<strong>${chat.title}</strong>» مطمئن هستید؟ این عمل قابل بازگشت نیست.</p>`,
+            bodyHtml: `<p>آیا از حذف گپ «<strong>${safeTitle}</strong>» مطمئن هستید؟ این عمل قابل بازگشت نیست.</p>`,
             confirmText: 'حذف',
             confirmClass: 'btn-danger',
             onConfirm: () => {

@@ -71,7 +71,12 @@ class MessageRenderer {
     displayTemporaryError(errorMessage) {
         const errorWrapper = document.createElement('div');
         errorWrapper.className = 'error-message-wrapper';
-        errorWrapper.innerHTML = `<div class="error-message-bubble">${errorMessage}</div>`;
+
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'error-message-bubble';
+        errorBubble.textContent = errorMessage; // Use textContent for security
+
+        errorWrapper.appendChild(errorBubble);
         this.container.appendChild(errorWrapper);
         this.scrollToBottom();
 
