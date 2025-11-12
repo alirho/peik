@@ -1,0 +1,139 @@
+/* ==========================================================================
+   Markdown Content Styles
+   ========================================================================== */
+
+.message-bubble > *:first-child {
+    margin-top: 0;
+}
+.message-bubble > *:last-child {
+    margin-bottom: 0;
+}
+
+/* Paragraphs */
+.message-bubble p {
+    margin-bottom: 1rem;
+}
+.message-bubble p:last-child {
+    margin-bottom: 0;
+}
+/* Headings */
+.message-bubble h1,
+.message-bubble h2,
+.message-bubble h3,
+.message-bubble h4,
+.message-bubble h5,
+.message-bubble h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 700;
+}
+.message-bubble h1 { font-size: 1.5em; }
+.message-bubble h2 { font-size: 1.25em; }
+.message-bubble h3 { font-size: 1.1em; }
+
+/* Lists */
+.message-bubble ul,
+.message-bubble ol {
+    padding-right: 1.5rem;
+    margin-bottom: 1rem;
+}
+.message-bubble li {
+    margin-bottom: 0.25rem;
+}
+.message-bubble li > p {
+    margin-bottom: 0.25rem;
+}
+
+/* Blockquotes */
+.message-bubble blockquote {
+    margin: 1em 0;
+    padding-right: 1rem;
+    border-right: 3px solid var(--border-light);
+    color: var(--text-muted-light);
+}
+html.dark .message-bubble blockquote {
+    border-right-color: var(--border-dark);
+    color: var(--text-muted-dark);
+}
+.message-bubble blockquote > p {
+    margin: 0;
+}
+
+/* Code Blocks */
+.message-bubble pre {
+    direction: ltr;
+    text-align: left;
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-light);
+    color: var(--text-light);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 1em 0;
+}
+html.dark .message-bubble pre {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    color: var(--text-dark);
+}
+.message-bubble code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.message-bubble pre code {
+    background: none;
+    padding: 0;
+    font-size: 0.875rem;
+}
+.message-bubble :not(pre) > code {
+    background-color: var(--color-primary-light);
+    color: var(--text-light);
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    border-radius: 3px;
+}
+html.dark .message-bubble :not(pre) > code {
+    background-color: var(--surface-dark-lighter);
+    color: var(--text-dark);
+}
+
+/* Horizontal Rule */
+.message-bubble hr {
+    border: none;
+    border-top: 1px solid var(--border-light);
+    margin: 1.5rem 0;
+}
+html.dark .message-bubble hr {
+    border-top-color: var(--border-dark);
+}
+
+/* Links */
+.message-bubble a {
+    color: var(--color-primary);
+    font-weight: 500;
+    text-decoration: none;
+}
+.message-bubble a:hover {
+    text-decoration: underline;
+}
+
+/* Tables */
+.message-bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+}
+.message-bubble th, .message-bubble td {
+    border: 1px solid var(--border-light);
+    padding: 0.5rem 0.75rem;
+}
+html.dark .message-bubble th, html.dark .message-bubble td {
+    border-color: var(--border-dark);
+}
+.message-bubble th {
+    font-weight: 700;
+    background-color: var(--hover-light);
+}
+html.dark .message-bubble th {
+    background-color: var(--hover-dark);
+}

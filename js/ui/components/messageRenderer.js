@@ -1,3 +1,5 @@
+import markdownService from '../../services/markdownService.js';
+
 /**
  * Manages rendering messages, typing indicators, and errors in the chat UI.
  */
@@ -33,25 +35,40 @@ class MessageRenderer {
      */
     appendMessage(message, isStreamingPlaceholder = false) {
         const { element, bubble } = this.createMessageElement(message);
-        if (isStreamingPlaceholder) {
-            bubble.innerHTML = this.createTypingIndicator();
+        
+        if (message.role === 'user') {
+            bubble.textContent = message.content;
+        } else { // assistant
+            if (isStreamingPlaceholder) {
+                bubble.innerHTML = this.createTypingIndicator();
+                bubble.dataset.rawContent = '';
+            } else {
+                bubble.innerHTML = markdownService.render(message.content);
+            }
         }
+
         this.container.appendChild(element);
         this.scrollToBottom();
         return bubble;
     }
     
     /**
-     * Appends a chunk of text to the last message bubble during streaming.
+     * Appends a chunk of text to the last message bubble during streaming and re-renders it as Markdown.
      * @param {HTMLElement} bubbleElement The message bubble element to update.
      * @param {string} chunk The piece of text to append.
      */
     appendChunk(bubbleElement, chunk) {
-        // If the first chunk, remove the typing indicator
+        // On the first chunk, remove the typing indicator
         if (bubbleElement.querySelector('.typing-indicator')) {
             bubbleElement.innerHTML = '';
         }
-        bubbleElement.textContent += chunk;
+        
+        // Append new text to raw content and re-render the whole bubble
+        const currentContent = bubbleElement.dataset.rawContent || '';
+        const newContent = currentContent + chunk;
+        bubbleElement.dataset.rawContent = newContent;
+        bubbleElement.innerHTML = markdownService.render(newContent);
+        
         this.scrollToBottom();
     }
 
@@ -87,13 +104,16 @@ class MessageRenderer {
     }
     
     /**
-     * Displays the initial welcome message.
+     * Displays the initial welcome message, rendered as Markdown.
      */
     showWelcomeMessage() {
-        const { element } = this.createMessageElement({
+        const welcomeText = 'سلام! امروز چطور می‌توانم به شما کمک کنم؟';
+        const { element, bubble } = this.createMessageElement({
             role: 'assistant',
-            content: 'سلام! امروز چطور می‌توانم به شما کمک کنم؟',
+            content: welcomeText,
         });
+        bubble.innerHTML = markdownService.render(welcomeText);
+
         this.container.innerHTML = '';
         this.container.appendChild(element);
     }
@@ -104,7 +124,10 @@ class MessageRenderer {
     scrollToBottom() {
         const chatArea = this.container.parentElement;
         if (chatArea) {
-            chatArea.scrollTop = chatArea.scrollHeight;
+            // A small delay can help if images are being loaded
+            setTimeout(() => {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }, 50);
         }
     }
 
@@ -131,7 +154,7 @@ class MessageRenderer {
     
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
-        bubble.textContent = message.content;
+        // Content is now set by the calling function (appendMessage, renderHistory, etc.)
     
         contentWrapper.append(label, bubble);
     
