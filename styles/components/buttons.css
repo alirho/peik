@@ -12,7 +12,7 @@
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s, opacity 0.2s;
+    transition: background-color 0.2s, opacity 0.2s, box-shadow 0.2s;
     white-space: nowrap;
     overflow: hidden;
 }
@@ -20,6 +20,11 @@
 .btn:disabled {
     cursor: not-allowed;
     opacity: 0.6;
+}
+
+.btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 .btn-secondary {
@@ -70,7 +75,7 @@ html.dark .btn-secondary:hover:not(:disabled) {
     background-color: transparent;
     color: var(--text-muted-light);
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
 }
 html.dark .menu-button {
     color: var(--text-muted-dark);
@@ -82,6 +87,10 @@ html.dark .menu-button {
 html.dark .menu-button:hover {
     background-color: var(--hover-dark);
     color: var(--text-dark);
+}
+.menu-button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 @media (max-width: 768px) {

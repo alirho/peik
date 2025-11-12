@@ -91,7 +91,7 @@ html.dark .actions-button {
     color: var(--text-muted-dark);
 }
 .chat-list-item:hover .actions-button,
-.actions-button:focus {
+.chat-list-item:focus-within .actions-button {
     opacity: 1;
 }
 .actions-button:hover {

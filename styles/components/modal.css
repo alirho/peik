@@ -218,6 +218,24 @@ html.dark .input-group-button:hover {
     padding-right: 0.5rem;
 }
 
+[dir="rtl"] .input-group-button {
+    border-right: none;
+    border-left: 1px solid var(--border-light);
+}
+html.dark [dir="rtl"] .input-group-button {
+    border-left-color: var(--border-dark);
+}
+
+[dir="rtl"] .input-group .form-input {
+    border-left: none;
+    border-right: 1px solid var(--border-light);
+    padding-right: 0.9375rem;
+    padding-left: 0.5rem;
+}
+html.dark [dir="rtl"] .input-group .form-input {
+    border-right-color: var(--border-dark);
+}
+
 
 .actions-container {
     display: flex;
