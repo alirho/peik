@@ -1,0 +1,60 @@
+<!-- Main Chat Application -->
+<div id="app-container" class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <!-- Model Selector -->
+            <div class="model-selector">
+                <div class="model-icon">
+                    <span class="material-symbols-outlined">smart_toy</span>
+                </div>
+                <div class="model-info">
+                    <h1 class="model-title">چت‌بات گوگ</h1>
+                    <p class="model-subtitle">گفتگو با هوش مصنوعی</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Actions -->
+        <div class="sidebar-actions">
+            <button id="edit-settings-button" class="btn btn-secondary">
+                <span class="material-symbols-outlined btn-icon">key</span>
+                <span>مدیریت کلید API</span>
+            </button>
+            <button class="btn btn-primary">
+                <span class="material-symbols-outlined btn-icon">add</span>
+                <span>چت جدید</span>
+            </button>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="main-header">
+            <h2 class="main-title">گوگ</h2>
+            <button class="menu-button" id="menu-toggle-button">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+        </header>
+        
+        <div class="chat-interface">
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div id="message-list" class="messages-container">
+                    <!-- Messages will be dynamically inserted here -->
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <footer class="input-area">
+                <form id="chat-form" class="input-container">
+                    <textarea id="message-input" class="message-input" placeholder="هر چیزی از من بپرسید..." rows="1"></textarea>
+                    <button id="send-button" type="submit" class="send-button">
+                        <span class="material-symbols-outlined">send</span>
+                    </button>
+                </form>
+            </footer>
+        </div>
+    </main>
+</div>

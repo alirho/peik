@@ -1,0 +1,151 @@
+/**
+ * Manages rendering messages, typing indicators, and errors in the chat UI.
+ */
+class MessageRenderer {
+    /**
+     * @param {HTMLElement} messageListContainer The DOM element where messages are displayed.
+     */
+    constructor(messageListContainer) {
+        this.container = messageListContainer;
+    }
+
+    /**
+     * Renders the entire chat history.
+     * @param {Array<object>} messages An array of message objects.
+     */
+    renderHistory(messages) {
+        this.clearMessages();
+        messages.forEach(msg => this.appendMessage(msg));
+    }
+    
+    /**
+     * Clears all messages from the display.
+     */
+    clearMessages() {
+        this.container.innerHTML = '';
+    }
+
+    /**
+     * Creates and appends a single message element to the container.
+     * @param {object} message The message object { role, content }.
+     * @param {boolean} isStreamingPlaceholder - If true, renders a typing indicator.
+     * @returns {HTMLElement | null} The message bubble element if created, otherwise null.
+     */
+    appendMessage(message, isStreamingPlaceholder = false) {
+        const { element, bubble } = this.createMessageElement(message);
+        if (isStreamingPlaceholder) {
+            bubble.innerHTML = this.createTypingIndicator();
+        }
+        this.container.appendChild(element);
+        this.scrollToBottom();
+        return bubble;
+    }
+    
+    /**
+     * Appends a chunk of text to the last message bubble during streaming.
+     * @param {HTMLElement} bubbleElement The message bubble element to update.
+     * @param {string} chunk The piece of text to append.
+     */
+    appendChunk(bubbleElement, chunk) {
+        // If the first chunk, remove the typing indicator
+        if (bubbleElement.querySelector('.typing-indicator')) {
+            bubbleElement.innerHTML = '';
+        }
+        bubbleElement.textContent += chunk;
+        this.scrollToBottom();
+    }
+
+    /**
+     * Removes the last message element from the container.
+     */
+    removeLastMessage() {
+        if (this.container.lastChild) {
+            this.container.removeChild(this.container.lastChild);
+        }
+    }
+
+    /**
+     * Displays a temporary error message in the chat.
+     * @param {string} errorMessage The error message to display.
+     */
+    displayTemporaryError(errorMessage) {
+        const errorWrapper = document.createElement('div');
+        errorWrapper.className = 'error-message-wrapper';
+        errorWrapper.innerHTML = `<div class="error-message-bubble">${errorMessage}</div>`;
+        this.container.appendChild(errorWrapper);
+        this.scrollToBottom();
+
+        setTimeout(() => {
+            errorWrapper.style.opacity = '0';
+            errorWrapper.addEventListener('transitionend', () => errorWrapper.remove());
+        }, 5000);
+    }
+    
+    /**
+     * Displays the initial welcome message.
+     */
+    showWelcomeMessage() {
+        const { element } = this.createMessageElement({
+            role: 'assistant',
+            content: 'سلام! امروز چطور می‌توانم به شما کمک کنم؟',
+        });
+        this.container.innerHTML = '';
+        this.container.appendChild(element);
+    }
+
+    /**
+     * Scrolls the message container to the bottom.
+     */
+    scrollToBottom() {
+        const chatArea = this.container.parentElement;
+        if (chatArea) {
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+    }
+
+    // --- Element Creators ---
+    
+    /**
+     * Creates the DOM elements for a single message.
+     * @param {object} message The message object.
+     * @returns {{element: HTMLElement, bubble: HTMLElement}} The wrapper element and bubble element.
+     */
+    createMessageElement(message) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `message ${message.role === 'user' ? 'user' : 'assistant'}`;
+    
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+    
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'message-content';
+    
+        const label = document.createElement('p');
+        label.className = 'message-label';
+        label.textContent = message.role === 'user' ? 'شما' : 'دستیار هوش مصنوعی';
+    
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.textContent = message.content;
+    
+        contentWrapper.append(label, bubble);
+    
+        if (message.role === 'user') {
+            wrapper.append(avatar, contentWrapper);
+        } else {
+            wrapper.append(contentWrapper, avatar);
+        }
+    
+        return { element: wrapper, bubble };
+    }
+    
+    /**
+     * Creates the HTML string for the typing indicator.
+     * @returns {string} HTML string.
+     */
+    createTypingIndicator() {
+        return `<div class="typing-indicator"><div class="dot-container"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+    }
+}
+
+export default MessageRenderer;

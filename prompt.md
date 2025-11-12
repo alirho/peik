@@ -157,3 +157,66 @@ Uncaught TypeError: The specifier “@google/genai” was a bare specifier, but 
 تغییرات را کامل انجام ندادی.
 1. آواتار کاربر به سمت راست منتقل نشده و جای قبلیش باقی مونده
 2. آواتار هوش هم باید به سمت چپ پیام هوش منتقل بشه
+
+### پرامپت ۱۸
+ساختار فایل‌های HTML و CSS پروژه پیچیده شده، می‌خوام این فایل‌ها را به یک معماری ماژولار و مبتنی بر کامپوننت تبدیل کنی تا نگهداری و توسعه اون‌ها آسان‌تر بشه.
+
+1.  **ساده‌سازی `index.html`:** این فایل باید بسیار سبک بشه و فقط شامل یک المنت ریشه در `<body>` باشه.
+2.  **ایجاد کامپوننت‌های HTML:** یک پوشه جدید به نام `templates/` بساز.
+    - هر بخش از HTML باید یک قالب جدا باشه.
+3.  بارگذاری پویای کامپوننت‌ها
+4.  فایل `chatUI.js` را هم باید ماژولار کنی.
+5.  برای **استایل‌ها** این موارد را رعایت کن
+    - حداکثر 100 خط در هر فایل CSS
+    - نام‌گذاری BEM یا مشابه
+    - هیچ استایل inline نباشه
+6. برای فایل‌های **JavaScript**:
+   - حداکثر 200 خط در هر فایل
+   - Export/Import صحیح
+   - JSDoc برای توابع
+7. برای فایل‌های **HTML**:
+   - Templates در فایل جداگانه یا template literals
+   - Semantic HTML
+   - Accessibility
+8.  **جداسازی Core/UI**: دقت کن که ظاهر باید از منطق برنامه جدا باشه و وابستگی نداشته باشن
+     - Core هیچ DOM manipulation نکند
+     - UI فقط از Core API استفاده کند
+     - Event-driven communication
+9.  ساختار پیشنهادی:
+
+```
+goug/
+├── index.html
+│
+├── styles/
+│   ├── variables.css        # CSS Variables
+│   ├── base.css             # Reset, Typography
+│   ├── layout.css           # Layout اصلی (sidebar, main)
+│   ├── components/
+│   │   ├── modal.css        # Modal styles
+│   │   ├── sidebar.css      # Sidebar styles
+│   │   ├── messages.css     # Message bubbles
+│   │   ├── input.css        # Input area
+│   │   └── buttons.css      # Button styles
+│   └── utilities.css        # Utilities (spinner, typing, error)
+│
+├── js/
+│   ├── ui/
+│   │   ├── chatUI.js
+│   │   └── components/
+│   │       ├── settingsModal.js     # مدیریت modal
+│   │       ├── messageRenderer.js   # رندر پیام‌ها
+│   │       └── sidebarManager.js    # مدیریت sidebar
+│   └── main.js
+│
+└── templates/              # HTML Templates
+    ├── settingsModal.html
+    └── sideBar.html
+```
+این موارد را هم حتما رعایت کن:
+- **Single Responsibility**: هر فایل یک مسئولیت
+- **Reusability**: کامپوننت‌های قابل استفاده مجدد
+- **Maintainability**: کد قابل نگهداری
+
+### پرامپت ۱۹
+اینکه همه فایل‌های css را در html آوردی به نظرم خوب نیست، بهتره فقط یک فایل را در این بخش معرفی کنی.

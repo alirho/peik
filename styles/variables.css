@@ -1,0 +1,35 @@
+:root {
+    /* رنگ‌ها */
+    --color-primary: #135bec;
+    --color-primary-hover: #0d4cc7;
+    --color-primary-light: rgba(19, 91, 236, 0.1);
+    --color-primary-lighter: rgba(19, 91, 236, 0.2);
+    --color-primary-disabled: #93c5fd;
+    --secondary: #4f46e5;
+
+    /* حالت روشن */
+    --bg-light: #f6f6f8;
+    --surface-light: #ffffff;
+    --border-light: #e2e8f0;
+    --text-light: #1e293b;
+    --text-secondary-light: #475569;
+    --text-muted-light: #64748b;
+    --hover-light: #f1f5f9;
+    
+    /* حالت تاریک */
+    --bg-dark: #101622;
+    --surface-dark: #1e293b;
+    --surface-dark-lighter: rgba(30, 41, 59, 0.4);
+    --border-dark: rgba(148, 163, 184, 0.2);
+    --text-dark: #ffffff;
+    --text-secondary-dark: #e2e8f0;
+    --text-muted-dark: #94a3b8;
+    --hover-dark: #334155;
+
+    /* فونت */
+    --font-family: 'Vazirmatn', sans-serif;
+    
+    /* سایه‌ها */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}

@@ -1,0 +1,64 @@
+.hidden {
+    display: none !important;
+}
+
+/* ==================== Spinner ==================== */
+.spinner {
+    height: 1.25rem;
+    width: 1.25rem;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-bottom-color: white;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==================== Typing Indicator ==================== */
+.typing-indicator {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.25rem;
+}
+.typing-indicator .dot-container {
+    display: flex;
+    gap: 0.25rem;
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.typing-indicator .dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: var(--text-muted-light);
+    border-radius: 50%;
+}
+html.dark .typing-indicator .dot { background-color: var(--text-muted-dark); }
+.typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ==================== Error Message ==================== */
+.error-message-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem; 
+    margin-bottom: 1.5rem;
+    transition: opacity 0.5s ease-in-out;
+}
+.error-message-bubble {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    max-width: 80%;
+    text-align: center;
+}
+html.dark .error-message-bubble {
+    background-color: #3b2020;
+    color: #fecaca;
+    border-color: #5c2c2c;
+}

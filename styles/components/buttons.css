@@ -1,0 +1,76 @@
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    width: 100%;
+    padding: 0 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.btn-secondary {
+    background-color: var(--border-light);
+    color: #334155;
+}
+html.dark .btn-secondary {
+    background-color: var(--hover-dark);
+    color: var(--text-secondary-dark);
+}
+.btn-secondary:hover {
+    background-color: #cbd5e1;
+}
+html.dark .btn-secondary:hover {
+    background-color: #475569;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+    font-weight: 700;
+}
+.btn-primary:hover {
+    background-color: var(--color-primary-hover);
+}
+.btn-icon {
+    font-size: 1.125rem;
+}
+
+.menu-button {
+    display: none; /* Hidden by default on desktop */
+    align-items: center;
+    justify-content: center;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    padding: 0 0.625rem;
+    border: none;
+    border-radius: 0.5rem;
+    background-color: transparent;
+    color: var(--text-muted-light);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+html.dark .menu-button {
+    color: var(--text-muted-dark);
+}
+.menu-button:hover {
+    background-color: var(--hover-light);
+    color: var(--text-light);
+}
+html.dark .menu-button:hover {
+    background-color: var(--hover-dark);
+    color: var(--text-dark);
+}
+
+@media (max-width: 768px) {
+    .menu-button {
+        display: flex;
+    }
+}

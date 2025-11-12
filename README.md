@@ -60,7 +60,7 @@
 
 پس از اجرای برنامه برای اولین بار، پنجره تنظیمات به شما نمایش داده می‌شود.
 
-1.  روی دکمه **"ویرایش تنظیمات"** کلیک کنید (اگر پنجره به صورت خودکار باز نشد).
+1.  روی دکمه **"مدیریت کلید API"** کلیک کنید (اگر پنجره به صورت خودکار باز نشد).
 2.  ارائه‌دهنده، کلید API و نام مدل خود را وارد کنید.
 
 ### نمونه تنظیمات
@@ -88,15 +88,41 @@
 
 ```
 /
+├── index.html              # نقطه ورود اصلی HTML
+|
+├── styles/
+│   ├── variables.css       # متغیرهای CSS (رنگ‌ها، فونت‌ها)
+│   ├── base.css            # استایل‌های پایه و ریست
+│   ├── layout.css          # ساختار اصلی چیدمان (sidebar, main)
+│   ├── components/         # استایل‌های کامپوننت‌های مجزا
+│   │   ├── buttons.css
+│   │   ├── input.css
+│   │   ├── messages.css
+│   │   ├── modal.css
+│   │   └── sidebar.css
+│   └── utilities.css       # کلاس‌های کمکی (spinner, error)
+│
 ├── js/
-│   ├── main.js             # نقطه ورود اصلی برنامه
-│   ├── chatEngine.js       # هسته منطق چت، مدیریت وضعیت و تاریخچه
-│   ├── chatUI.js           # مدیریت تمام عناصر DOM و رویدادهای کاربر
-│   ├── apiService.js       # مسئول ارسال درخواست‌ها به API و مدیریت خطا
-│   ├── storageService.js   # مدیریت ذخیره و بازیابی اطلاعات از localStorage
-│   └── eventEmitter.js     # یک کلاس ساده برای ارتباط بین ماژول‌ها
-├── index.html              # ساختار اصلی صفحه
-└── style.css               # استایل‌های برنامه
+│   ├── core/               # منطق اصلی و غیروابسته به UI
+│   │   ├── chatEngine.js
+│   │   ├── apiService.js
+│   │   ├── storageService.js
+│   │   └── eventEmitter.js
+│   ├── ui/                 # منطق مربوط به رابط کاربری
+│   │   ├── chatUI.js       # ارکستراتور اصلی UI
+│   │   ├── templateLoader.js # بارگذاری قالب‌های HTML
+│   │   └── components/     # کامپوننت‌های UI
+│   │       ├── messageRenderer.js
+│   │       ├── settingsModal.js
+│   │       └── sidebarManager.js
+│   ├── utils/              # توابع کمکی
+│   │   └── apiErrors.js
+│   └── main.js             # نقطه ورود اصلی برنامه
+│
+└── templates/              # قالب‌های HTML
+    ├── mainLayout.html
+    └── settingsModal.html
+
 ```
 
 

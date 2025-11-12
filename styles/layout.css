@@ -1,0 +1,65 @@
+/* ==================== Layout ==================== */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* ==================== Main Content ==================== */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+}
+
+.main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 4rem;
+    padding: 0 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+}
+html.dark .main-header {
+    border-bottom-color: var(--border-dark);
+}
+
+.main-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+/* Chat Interface Wrapper */
+.chat-interface {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    width: 100%;
+    max-width: 56rem;
+    margin: 0 auto;
+    overflow: hidden;
+    padding: 0 1.5rem;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        right: -18rem;
+        top: 0;
+        bottom: 0;
+        transition: right 0.3s ease-in-out;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .sidebar.open {
+        right: 0;
+    }
+
+    .chat-interface {
+        padding: 0 1rem;
+    }
+}
