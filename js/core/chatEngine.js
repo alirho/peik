@@ -4,6 +4,8 @@ import { streamGeminiResponse } from './providers/geminiProvider.js';
 import { streamOpenAIResponse } from './providers/openaiProvider.js';
 import { streamCustomResponse } from './providers/customProvider.js';
 
+const SYNC_CHANNEL_NAME = 'goug-chat-sync';
+
 class ChatEngine extends EventEmitter {
     constructor() {
         super();
@@ -11,6 +13,7 @@ class ChatEngine extends EventEmitter {
         this.activeChatId = null;
         this.isLoading = false;
         this.settings = null;
+        this.syncChannel = null;
         this.providers = {
             gemini: streamGeminiResponse,
             openai: streamOpenAIResponse,
@@ -19,28 +22,86 @@ class ChatEngine extends EventEmitter {
     }
 
     async init() {
-        this.settings = await Storage.loadSettings();
-        this.chats = await Storage.loadAllChats();
-        
-        if (this.chats.length === 0) {
-            await this.startNewChat(false); // Don't emit update yet
-        } else {
-            const lastActive = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
-            this.activeChatId = lastActive.id;
-        }
+        try {
+            this.settings = await Storage.loadSettings();
+            this.chats = await Storage.loadAllChats();
+            
+            if (this.chats.length === 0) {
+                // Creates a new chat in memory, will be saved on first message
+                this.startNewChat(false);
+            } else {
+                const lastActive = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
+                this.activeChatId = lastActive.id;
+            }
 
-        this.emit('init', {
-            settings: this.settings,
-            chats: this.chats,
-            activeChat: this.getActiveChat(),
-        });
+            this.emit('init', {
+                settings: this.settings,
+                chats: this.chats,
+                activeChat: this.getActiveChat(),
+            });
+            
+            this.setupSyncChannel();
+
+        } catch (error) {
+            this.emit('error', error.message || 'خطا در بارگذاری تاریخچه گفتگوها.');
+        }
+    }
+
+    setupSyncChannel() {
+        if ('BroadcastChannel' in window) {
+            try {
+                this.syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+                this.syncChannel.onmessage = (event) => {
+                    if (event.data.type === 'update') {
+                        this.handleSyncUpdate();
+                    }
+                };
+            } catch (e) {
+                console.error("BroadcastChannel could not be created:", e);
+                this.syncChannel = null;
+            }
+        }
+    }
+
+    broadcastUpdate() {
+        if (this.syncChannel) {
+            this.syncChannel.postMessage({ type: 'update' });
+        }
+    }
+
+    async handleSyncUpdate() {
+        try {
+            this.chats = await Storage.loadAllChats();
+            const activeChatExists = this.chats.some(c => c.id === this.activeChatId);
+
+            if (!activeChatExists) {
+                if (this.chats.length > 0) {
+                    const newActiveChat = this.chats.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+                    this.activeChatId = newActiveChat.id;
+                } else {
+                    // All chats were deleted from another tab
+                    await this.startNewChat();
+                    return; // startNewChat handles its own emissions
+                }
+            }
+
+            this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
+            this.emit('activeChatSwitched', this.getActiveChat());
+
+        } catch (error) {
+            this.emit('error', error.message || 'خطا در همگام‌سازی با تب‌های دیگر.');
+        }
     }
 
     async saveSettings(settings) {
         if (settings) {
-            this.settings = settings;
-            await Storage.saveSettings(settings);
-            this.emit('settingsSaved', settings);
+            try {
+                this.settings = settings;
+                await Storage.saveSettings(settings);
+                this.emit('settingsSaved', settings);
+            } catch (error) {
+                this.emit('error', error.message);
+            }
         }
     }
 
@@ -61,7 +122,12 @@ class ChatEngine extends EventEmitter {
         if (emitUpdate) {
             this.emit('activeChatSwitched', newChat);
             this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
-            await Storage.saveAllChats(this.chats);
+            try {
+                await Storage.saveChat(newChat);
+                this.broadcastUpdate();
+            } catch (error) {
+                this.emit('error', error.message);
+            }
         }
     }
     
@@ -79,27 +145,38 @@ class ChatEngine extends EventEmitter {
         const chat = this.chats.find(c => c.id === chatId);
         if (chat) {
             chat.title = newTitle;
-            await Storage.saveAllChats(this.chats);
-            this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
-            if (chat.id === this.activeChatId) {
-                 this.emit('activeChatSwitched', chat);
+            chat.updatedAt = Date.now();
+            try {
+                await Storage.saveChat(chat);
+                this.broadcastUpdate();
+                this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
+                if (chat.id === this.activeChatId) {
+                     this.emit('activeChatSwitched', chat);
+                }
+            } catch (error) {
+                this.emit('error', error.message);
             }
         }
     }
 
     async deleteChat(chatId) {
         this.chats = this.chats.filter(c => c.id !== chatId);
-        await Storage.saveAllChats(this.chats);
+        try {
+            await Storage.deleteChatById(chatId);
+            this.broadcastUpdate();
 
-        if (this.activeChatId === chatId) {
-            if (this.chats.length > 0) {
-                const newActiveChat = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
-                this.switchActiveChat(newActiveChat.id);
+            if (this.activeChatId === chatId) {
+                if (this.chats.length > 0) {
+                    const newActiveChat = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
+                    this.switchActiveChat(newActiveChat.id);
+                } else {
+                    await this.startNewChat();
+                }
             } else {
-                await this.startNewChat();
+                this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
             }
-        } else {
-            this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
+        } catch (error) {
+            this.emit('error', error.message);
         }
     }
 
@@ -165,7 +242,12 @@ class ChatEngine extends EventEmitter {
             this.emit('error', errorMessage);
         } finally {
             activeChat.updatedAt = Date.now();
-            await Storage.saveAllChats(this.chats);
+            try {
+                await Storage.saveChat(activeChat);
+                this.broadcastUpdate();
+            } catch (storageError) {
+                this.emit('error', storageError.message);
+            }
             this.emit('streamEnd', fullResponse);
             this.setLoading(false);
         }
