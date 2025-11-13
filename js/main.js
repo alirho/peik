@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Ensure the UI is fully initialized before the engine starts emitting events
         await chatUI.init();
-        chatEngine.init();
+        await chatEngine.init();
     } catch (error) {
         console.error('Application failed to initialize:', error);
         rootElement.innerHTML = `<div style="padding: 2rem; text-align: center; color: #b91c1c;">

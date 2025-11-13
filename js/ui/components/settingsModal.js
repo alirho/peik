@@ -3,7 +3,7 @@
  */
 class SettingsModal {
     /**
-     * @param {import('../../chatEngine.js').default} engine The chat engine instance.
+     * @param {import('../../core/chatEngine.js').default} engine The chat engine instance.
      */
     constructor(engine) {
         this.engine = engine;
@@ -63,12 +63,12 @@ class SettingsModal {
      * Handles the form submission to save settings.
      * @param {Event} e The submit event.
      */
-    handleSave(e) {
+    async handleSave(e) {
         e.preventDefault();
         
         const settings = this.getSettingsFromForm();
         if (settings) {
-            this.engine.saveSettings(settings);
+            await this.engine.saveSettings(settings);
         }
     }
     

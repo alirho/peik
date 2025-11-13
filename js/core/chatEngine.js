@@ -18,12 +18,12 @@ class ChatEngine extends EventEmitter {
         };
     }
 
-    init() {
-        this.settings = Storage.loadSettings();
-        this.chats = Storage.loadAllChats();
+    async init() {
+        this.settings = await Storage.loadSettings();
+        this.chats = await Storage.loadAllChats();
         
         if (this.chats.length === 0) {
-            this.startNewChat(false); // Don't emit update yet
+            await this.startNewChat(false); // Don't emit update yet
         } else {
             const lastActive = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
             this.activeChatId = lastActive.id;
@@ -36,15 +36,15 @@ class ChatEngine extends EventEmitter {
         });
     }
 
-    saveSettings(settings) {
+    async saveSettings(settings) {
         if (settings) {
             this.settings = settings;
-            Storage.saveSettings(settings);
+            await Storage.saveSettings(settings);
             this.emit('settingsSaved', settings);
         }
     }
 
-    startNewChat(emitUpdate = true) {
+    async startNewChat(emitUpdate = true) {
         const now = Date.now();
         const newChat = {
             id: `chat_${now}`,
@@ -61,7 +61,7 @@ class ChatEngine extends EventEmitter {
         if (emitUpdate) {
             this.emit('activeChatSwitched', newChat);
             this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
-            Storage.saveAllChats(this.chats);
+            await Storage.saveAllChats(this.chats);
         }
     }
     
@@ -75,11 +75,11 @@ class ChatEngine extends EventEmitter {
         }
     }
 
-    renameChat(chatId, newTitle) {
+    async renameChat(chatId, newTitle) {
         const chat = this.chats.find(c => c.id === chatId);
         if (chat) {
             chat.title = newTitle;
-            Storage.saveAllChats(this.chats);
+            await Storage.saveAllChats(this.chats);
             this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
             if (chat.id === this.activeChatId) {
                  this.emit('activeChatSwitched', chat);
@@ -87,16 +87,16 @@ class ChatEngine extends EventEmitter {
         }
     }
 
-    deleteChat(chatId) {
+    async deleteChat(chatId) {
         this.chats = this.chats.filter(c => c.id !== chatId);
-        Storage.saveAllChats(this.chats);
+        await Storage.saveAllChats(this.chats);
 
         if (this.activeChatId === chatId) {
             if (this.chats.length > 0) {
                 const newActiveChat = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
                 this.switchActiveChat(newActiveChat.id);
             } else {
-                this.startNewChat();
+                await this.startNewChat();
             }
         } else {
             this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
@@ -165,7 +165,7 @@ class ChatEngine extends EventEmitter {
             this.emit('error', errorMessage);
         } finally {
             activeChat.updatedAt = Date.now();
-            Storage.saveAllChats(this.chats);
+            await Storage.saveAllChats(this.chats);
             this.emit('streamEnd', fullResponse);
             this.setLoading(false);
         }
