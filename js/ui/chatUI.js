@@ -68,9 +68,30 @@ class ChatUI {
         this.sidebarManager = new SidebarManager(this.engine);
     }
 
+    /**
+     * Checks if the API settings are valid enough to run the app.
+     * @param {object | null} settings The settings object from storage.
+     * @returns {boolean} True if settings are valid, false otherwise.
+     */
+    isSettingsValid(settings) {
+        if (!settings || !settings.provider) {
+            return false;
+        }
+
+        // For custom provider, the endpoint URL is the minimum requirement.
+        if (settings.provider === 'custom') {
+            return !!settings.endpointUrl;
+        }
+        
+        // For standard providers (Gemini, OpenAI), an API key is required.
+        return !!settings.apiKey;
+    }
+
     bindCoreEvents() {
         this.engine.on('init', ({ settings, chats, activeChat }) => {
-            if (!settings) this.settingsModal.show(true);
+            if (!this.isSettingsValid(settings)) {
+                this.settingsModal.show(true);
+            }
             this.sidebarManager.render(chats, activeChat.id);
             this.updateChatView(activeChat);
         });
