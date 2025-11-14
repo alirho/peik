@@ -49,7 +49,7 @@ chatEngine.on('activeChatSwitched', (activeChat) => {
 | ------------------------ | ------------------------ | ---------------------------------------------------------------------- |
 | `init()`                 | -                        | موتور را راه‌اندازی کرده و داده‌ها را از `storageService` بارگذاری می‌کند. |
 | `saveSettings(settings)` | `settings: object`       | تنظیمات جدید را دریافت و در حافظه ذخیره می‌کند.                        |
-| `sendMessage(userInput)` | `userInput: string`      | پیام کاربر را به چت فعال اضافه کرده و برای پردازش به Provider ارسال می‌کند.|
+| `sendMessage(userInput, image)` | `userInput: string`, `image?: {data, mimeType}` | پیام کاربر (و تصویر اختیاری) را به چت فعال اضافه کرده و برای پردازش ارسال می‌کند.|
 | `startNewChat()`         | -                        | یک چت جدید و خالی ایجاد کرده و آن را به عنوان چت فعال تنظیم می‌کند.       |
 | `switchActiveChat(chatId)`| `chatId: string`        | چت مشخص شده را به عنوان چت فعال تنظیم می‌کند.                         |
 | `renameChat(chatId, newTitle)` | `chatId: string, newTitle: string` | عنوان یک چت مشخص را تغییر می‌دهد.                                     |
@@ -58,16 +58,30 @@ chatEngine.on('activeChatSwitched', (activeChat) => {
 
 **مثال استفاده:**
 ```javascript
-// Switch to a different chat
-chatEngine.switchActiveChat('chat_1678886400000');
+// Send a text message
+chatEngine.sendMessage('سلام، حالت چطوره؟');
 
-// Start a new conversation
-chatEngine.startNewChat();
+// Send an image with a caption
+const imageObject = { data: 'base64_string...', mimeType: 'image/jpeg' };
+chatEngine.sendMessage('این عکس را ببین', imageObject);
 ```
 
 ## بخش ۲: راهنمای توسعه
 
 این بخش به شما نشان می‌دهد چگونه قابلیت‌های جدید به برنامه اضافه کنید.
+
+### چگونه منطق تصویر کار می‌کند؟
+
+جریان داده برای ارسال یک تصویر به شرح زیر است:
+
+1.  **انتخاب فایل (`ChatUI`)**: کاربر روی دکمه پیوست کلیک می‌کند و `handleFileSelect` فراخوانی می‌شود.
+2.  **اعتبارسنجی و خواندن (`ChatUI`)**: فایل از نظر نوع و حجم اعتبارسنجی می‌شود. سپس با استفاده از `FileReader` به صورت `Data URL` خوانده می‌شود.
+3.  **فشرده‌سازی (`ChatUI`)**: اگر حجم فایل از ۲ مگابایت بیشتر باشد (و GIF نباشد)، متد `compressImage` فراخوانی می‌شود. این متد یک `Image` و `Canvas` موقت ایجاد می‌کند تا ابعاد تصویر را تغییر داده و آن را با کیفیت ۸۰٪ مجدداً به `Data URL` تبدیل کند.
+4.  **ذخیره در وضعیت UI (`ChatUI`)**: آبجکت تصویر (`{ data: base64, mimeType: '...' }`) در `this.attachedImage` ذخیره شده و `renderPreview` برای نمایش پیش‌نمایش فراخوانی می‌شود.
+5.  **ارسال به موتور (`ChatUI` -> `ChatEngine`)**: هنگام ارسال، `handleSendMessage` آبجکت تصویر را به متد `chatEngine.sendMessage` پاس می‌دهد.
+6.  **افزودن به تاریخچه (`ChatEngine`)**: `ChatEngine` یک آبجکت پیام جدید با پراپرتی `image` ایجاد کرده و آن را به تاریخچه چت فعال اضافه می‌کند، سپس رویداد `message` را برای UI منتشر می‌کند.
+7.  **ارسال به Provider (`ChatEngine` -> `Provider`)**: تاریخچه پیام‌ها (شامل آبجکت پیام با تصویر) به `Provider` مربوطه (مثلاً `geminiProvider`) ارسال می‌شود.
+8.  **ساخت بدنه درخواست (`Provider`)**: هر `Provider` (در `build...RequestBody`) مسئول تبدیل آبجکت تصویر استاندارد برنامه به فرمت مورد نیاز API خود است (مثلاً `inlineData` برای Gemini یا `image_url` برای OpenAI).
 
 ### چگونه یک Provider جدید اضافه کنیم؟
 
@@ -82,49 +96,13 @@ chatEngine.startNewChat();
 
 **مرحله ۳: ساخت بدنه درخواست و پردازش پاسخ**
 درون این تابع، منطق زیر را پیاده‌سازی کنید:
-1.  ساختن بدنه درخواست (Request Body) مطابق با مستندات API مورد نظر.
+1.  ساختن بدنه درخواست (Request Body) مطابق با مستندات API مورد نظر. **اگر API از تصویر پشتیبانی می‌کند، باید تاریخچه را پیمایش کرده و آبجکت تصویر را به فرمت مناسب تبدیل کنید.**
 2.  فراخوانی `fetchStreamWithRetries` از `apiService.js` با URL، گزینه‌ها و Callbackهای مناسب.
 3.  ایجاد یک تابع برای پردازش هر خط از پاسخ استریم (SSE).
 4.  ایجاد یک تابع برای استخراج پیام خطا از پاسخ در صورت بروز مشکل.
 
-**مثال اسکلت کد برای `anthropicProvider.js`:**
-```javascript
-import { fetchStreamWithRetries } from '../../services/apiService.js';
-import { getErrorMessageForStatus } from '../../utils/apiErrors.js';
-
-function buildAnthropicBody(history) { /* ... */ }
-function processAnthropicStream(line, onChunk) { /* ... */ }
-async function getAnthropicError(response) { /* ... */ }
-
-export async function streamAnthropicResponse(settings, history, onChunk) {
-    const API_URL = 'https://api.anthropic.com/v1/messages';
-    const body = buildAnthropicBody(history);
-
-    const options = { /* ... headers and method ... */ };
-
-    await fetchStreamWithRetries(
-        API_URL,
-        options,
-        processAnthropicStream,
-        getAnthropicError
-    );
-}
-```
-
 **مرحله ۴: ثبت Provider جدید**
-در فایل `js/core/chatEngine.js`، Provider جدید خود را وارد (import) کرده و به مپ `this.providers` اضافه کنید:
-```javascript
-// At the top
-import { streamAnthropicResponse } from './providers/anthropicProvider.js';
-
-// Inside constructor
-this.providers = {
-    gemini: streamGeminiResponse,
-    openai: streamOpenAIResponse,
-    custom: streamCustomResponse,
-    anthropic: streamAnthropicResponse, // Add this line
-};
-```
+در فایل `js/core/chatEngine.js`، Provider جدید خود را وارد (import) کرده و به مپ `this.providers` اضافه کنید.
 
 **مرحله ۵ (اختیاری): به‌روزرسانی UI**
 اگر Provider جدید نیاز به فیلدهای خاصی در تنظیمات دارد، فایل `templates/settingsModal.html` و `js/ui/components/settingsModal.js` را برای افزودن فیلدهای ورودی و منطق مربوطه ویرایش کنید.
@@ -136,12 +114,9 @@ this.providers = {
 2.  به رویدادهای آن گوش دهید تا DOM را به‌روزرسانی کنید.
 3.  متدهای عمومی آن را برای ارسال پیام یا ذخیره تنظیمات فراخوانی کنید.
 
-این جداسازی به شما اجازه می‌دهد که کل لایه UI را با یک فریمورک دیگر مانند React یا Vue جایگزین کنید، بدون اینکه نیازی به تغییر `ChatEngine` باشد.
-
 ### چگونه مکانیزم ذخیره‌سازی را تغییر دهیم؟
 
-تمام منطق ذخیره‌سازی در `js/services/storageService.js` کپسوله شده است. این ماژول در حال حاضر از `IndexedDB` استفاده می‌کند که یک راه‌حل قوی و پایدار برای ذخیره‌سازی سمت کلاینت است.
-اگر می‌خواهید از یک مکانیزم دیگر (مانند یک API در بک‌اند) استفاده کنید، فقط کافی است توابع `async` زیر را در این فایل بازنویسی کنید و مطمئن شوید که همان نوع داده را برمی‌گردانند:
+تمام منطق ذخیره‌سازی در `js/services/storageService.js` کپسوله شده است. این ماژول در حال حاضر از `IndexedDB` استفاده می‌کند. اگر می‌خواهید از یک مکانیزم دیگر (مانند یک API در بک‌اند) استفاده کنید، فقط کافی است توابع `async` زیر را در این فایل بازنویسی کنید:
 -   `saveChat(chat)`
 -   `deleteChatById(chatId)`
 -   `loadAllChats()`
@@ -152,18 +127,17 @@ this.providers = {
 
 ### چگونه مفسر Markdown را تغییر دهیم؟
 
-تمام منطق پردازش Markdown در فایل `js/services/markdownService.js` قرار دارد. این سرویس در حال حاضر از کتابخانه `markdown-it` استفاده می‌کند.
-اگر می‌خواهید از یک مفسر دیگر (مانند Marked.js یا یک مفسر سفارشی) استفاده کنید، کافی است این فایل را ویرایش کنید. تا زمانی که یک متد `render(markdownText)` را `export` کنید که یک رشته HTML برمی‌گرداند، بقیه برنامه بدون هیچ تغییری به کار خود ادامه خواهد داد.
+تمام منطق پردازش Markdown در فایل `js/services/markdownService.js` قرار دارد. برای استفاده از یک مفسر دیگر، کافی است این فایل را ویرایش کرده و متد `render(markdownText)` را با پیاده‌سازی جدید جایگزین کنید.
 
 ## بخش ۳: بهترین شیوه‌ها (Best Practices)
 
 ### الگوهای طراحی استفاده شده
 
--   **Observer (Pub/Sub)**: از طریق `EventEmitter` پیاده‌سازی شده و ارتباط بین `Core` و `UI` را مدیریت می‌کند. این الگو باعث جداسازی کامل این دو لایه می‌شود.
--   **Strategy**: در `chatEngine.js` برای انتخاب `Provider` در زمان اجرا استفاده می‌شود. این الگو به ما اجازه می‌دهد به راحتی Providerهای جدید اضافه کنیم.
+-   **Observer (Pub/Sub)**: از طریق `EventEmitter` پیاده‌سازی شده و ارتباط بین `Core` و `UI` را مدیریت می‌کند.
+-   **Strategy**: در `chatEngine.js` برای انتخاب `Provider` در زمان اجرا استفاده می‌شود.
 -   **Module**: استفاده گسترده از ماژول‌های ES6 برای تقسیم کد به بخش‌های کوچک و با مسئولیت واحد.
 
 ### نکات امنیتی
 
--   **محافظت از کلید API**: این یک برنامه کاملاً سمت کاربر (Client-Side) است. **کلیدهای API در `IndexedDB` ذخیره می‌شوند که اگرچه از `localStorage` امن‌تر است، اما همچنان در دسترس کاربر در مرورگر قرار دارد.** برای یک محیط پروداکشن واقعی، شما باید یک سرور واسط (Backend Proxy) ایجاد کنید که کلیدهای API را به صورت امن نگهداری کند. کلاینت با سرور شما ارتباط برقرار می‌کند و سرور شما درخواست را به API نهایی ارسال می‌کند.
--   **جلوگیری از XSS**: کتابخانه `markdown-it` به صورت پیش‌فرض تگ‌های HTML را پاک‌سازی (Sanitize) نمی‌کند. از آنجایی که گزینه `html: true` فعال است، باید به محتوایی که از API دریافت می‌شود اعتماد کرد. برای امنیت بیشتر در آینده، می‌توان یک پاک‌سازی‌کننده HTML مانند `DOMPurify` را به `markdownService` اضافه کرد.
+-   **محافظت از کلید API**: این یک برنامه کاملاً سمت کاربر (Client-Side) است. **کلیدهای API در `IndexedDB` ذخیره می‌شوند که اگرچه از `localStorage` امن‌تر است، اما همچنان در دسترس کاربر در مرورگر قرار دارد.** برای یک محیط پروداکشن واقعی، شما باید یک سرور واسط (Backend Proxy) ایجاد کنید که کلیدهای API را به صورت امن نگهداری کند.
+-   **جلوگیری از XSS**: کتابخانه `markdown-it` برای لینک‌ها و محتوای Markdown استفاده می‌شود. تنظیمات فعلی `html: false` است که از تزریق HTML توسط مدل جلوگیری می‌کند، اما `linkify: true` فعال است. همیشه به خروجی‌های کتابخانه‌های third-party با احتیاط نگاه کنید.
