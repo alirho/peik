@@ -8,9 +8,11 @@ import { getErrorMessageForStatus } from '../../utils/apiErrors.js';
  */
 export function buildOpenAIRequestBody(history) {
     const messages = history.map(msg => {
-        if (msg.role === 'user' && msg.image) {
+        if (msg.role === 'user' && msg.image && msg.image.data && msg.image.mimeType) {
             const content = [];
-            content.push({ type: 'text', text: msg.content || '' });
+            if (msg.content) {
+                content.push({ type: 'text', text: msg.content });
+            }
             content.push({
                 type: 'image_url',
                 image_url: {

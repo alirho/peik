@@ -15,7 +15,7 @@ function buildGeminiRequestBody(history) {
             if (msg.content) {
                 parts.push({ text: msg.content });
             }
-            if (msg.image) {
+            if (msg.image && msg.image.data && msg.image.mimeType) {
                 parts.push({
                     inlineData: {
                         mimeType: msg.image.mimeType,

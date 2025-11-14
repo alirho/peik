@@ -204,13 +204,31 @@ class ChatUI {
             return;
         }
 
-        this.dom.imagePreviewContainer.innerHTML = `
-            <img src="data:${this.attachedImage.mimeType};base64,${this.attachedImage.data}" alt="Preview" class="preview-image">
-            <button class="preview-remove-button" title="حذف تصویر">×</button>
-        `;
-        this.dom.imagePreviewContainer.classList.remove('hidden');
+        this.dom.imagePreviewContainer.innerHTML = ''; // Clear previous content
 
-        this.dom.imagePreviewContainer.querySelector('.preview-remove-button').addEventListener('click', () => this.clearPreview());
+        const img = document.createElement('img');
+        img.src = `data:${this.attachedImage.mimeType};base64,${this.attachedImage.data}`;
+        img.alt = 'Preview';
+        img.className = 'preview-image';
+
+        img.onload = () => {
+            // Image loaded successfully, show the preview
+            const removeButton = document.createElement('button');
+            removeButton.className = 'preview-remove-button';
+            removeButton.title = 'حذف تصویر';
+            removeButton.textContent = '×';
+            removeButton.addEventListener('click', () => this.clearPreview());
+
+            this.dom.imagePreviewContainer.appendChild(img);
+            this.dom.imagePreviewContainer.appendChild(removeButton);
+            this.dom.imagePreviewContainer.classList.remove('hidden');
+        };
+
+        img.onerror = () => {
+            // Image failed to load
+            this.clearPreview();
+            this.engine.emit('error', 'خطا در نمایش پیش‌نمایش تصویر');
+        };
     }
 
     clearPreview() {

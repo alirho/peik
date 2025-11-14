@@ -39,11 +39,20 @@ class MessageRenderer {
         if (message.role === 'user') {
             bubble.innerHTML = ''; // Clear default content
 
-            if (message.image) {
+            if (message.image && message.image.data && message.image.mimeType) {
                 const img = document.createElement('img');
                 img.src = `data:${message.image.mimeType};base64,${message.image.data}`;
                 img.alt = 'تصویر بارگذاری شده';
                 img.className = 'message-image';
+
+                // Handle image loading errors
+                img.onerror = () => {
+                    const errorSpan = document.createElement('span');
+                    errorSpan.textContent = '⚠️ خطا در بارگذاری تصویر';
+                    errorSpan.style.fontStyle = 'italic';
+                    img.replaceWith(errorSpan);
+                };
+
                 bubble.appendChild(img);
             }
             
