@@ -90,6 +90,7 @@ class MessageRenderer {
                 bubble.dataset.rawContent = '';
             } else {
                 bubble.innerHTML = markdownService.render(message.content);
+                bubble.dataset.rawContent = message.content;
             }
         }
 
@@ -203,10 +204,23 @@ class MessageRenderer {
         // Content is now set by the calling function (appendMessage, renderHistory, etc.)
     
         contentWrapper.append(label, bubble);
+
+        // Create the copy button. For user messages, only if there's text.
+        // For assistant messages, always create it to handle streamed content.
+        let copyButton = null;
+        if (message.content || message.role !== 'user') {
+            copyButton = document.createElement('button');
+            copyButton.className = 'copy-button';
+            copyButton.title = 'رونوشت';
+            copyButton.innerHTML = `<span class="material-symbols-outlined">content_copy</span>`;
+            copyButton.addEventListener('click', () => this.handleCopy(copyButton, message, bubble));
+        }
     
         if (message.role === 'user') {
             wrapper.append(avatar, contentWrapper);
+            if (copyButton) wrapper.append(copyButton);
         } else {
+            if (copyButton) wrapper.append(copyButton);
             wrapper.append(contentWrapper, avatar);
         }
     
@@ -219,6 +233,47 @@ class MessageRenderer {
      */
     createTypingIndicator() {
         return `<div class="typing-indicator"><div class="dot-container"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+    }
+
+    /**
+     * Handles the click event for the copy button on a message.
+     * @param {HTMLButtonElement} button The button element that was clicked.
+     * @param {object} message The message object associated with the button.
+     * @param {HTMLElement} bubble The message bubble element.
+     */
+    async handleCopy(button, message, bubble) {
+        // Determine the text to copy
+        let textToCopy = '';
+        if (message.role !== 'user') {
+            // For model/assistant, use the raw markdown content stored in the dataset
+            textToCopy = bubble.dataset.rawContent || message.content;
+        } else {
+            // For user, just use the text content
+            textToCopy = message.content;
+        }
+
+        if (!textToCopy) return; // Nothing to copy
+
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            
+            // Visual feedback
+            button.innerHTML = `<span class="material-symbols-outlined">check</span>`;
+            button.classList.add('copied');
+            button.disabled = true;
+
+            // Revert after 3 seconds
+            setTimeout(() => {
+                button.innerHTML = `<span class="material-symbols-outlined">content_copy</span>`;
+                button.classList.remove('copied');
+                button.disabled = false;
+            }, 3000);
+
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            button.title = 'رونوشت ناموفق بود';
+            setTimeout(() => { button.title = 'رونوشت'; }, 2000);
+        }
     }
 }
 

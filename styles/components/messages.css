@@ -49,7 +49,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
-    flex-grow: 1;
     max-width: 80%;
 }
 .message.user .message-content {
@@ -159,4 +158,47 @@ html.dark .shimmer::after {
     .message-bubble, .message-content {
         max-width: 90%;
     }
+}
+
+/* Copy Button */
+.copy-button {
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.375rem;
+    cursor: pointer;
+    color: var(--text-muted-light);
+    opacity: 0;
+    transition: opacity 0.2s, background-color 0.2s, color 0.2s;
+    align-self: center;
+    margin-bottom: 0.5rem;
+    line-height: 1; /* Prevent layout shifts */
+}
+
+html.dark .copy-button {
+    color: var(--text-muted-dark);
+}
+
+.message:hover .copy-button {
+    opacity: 1;
+}
+
+.copy-button:hover:not(.copied) {
+    background-color: var(--hover-light);
+    color: var(--text-light);
+}
+
+html.dark .copy-button:hover:not(.copied) {
+    background-color: var(--hover-dark);
+    color: var(--text-dark);
+}
+
+.copy-button .material-symbols-outlined {
+    font-size: 1.125rem;
+    display: block;
+}
+
+.copy-button.copied {
+    color: #10b981;
+    cursor: default;
 }
