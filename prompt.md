@@ -553,3 +553,17 @@ Uncaught SyntaxError: The requested module 'http://127.0.0.1:8000/js/lib/markdow
 کد مربوط به مهاجرت پیام‌های قدیمی (migration) رو حذف کن:
 
 در chatEngine.js، بخشی که پیام‌های بدون ID یا timestamp رو چک می‌کنه و بهشون ID و timestamp می‌ده رو کاملاً حذف کن. از این به بعد، همه پیام‌ها از اول ID و timestamp دارن، پس نیازی به چک کردن و اضافه کردن نیست.
+
+### پرامپت ۵۳
+می‌خوام هسته ChatEngine رو مستقل از IndexedDB کنی تا بشه در هر محیطی (مرورگر، Node.js، React Native و...) استفاده کرد:
+1. ChatEngine نباید مستقیماً از storageService استفاده کنه. به جاش، یک آبجکت storage از بیرون دریافت کنه.
+2. در constructor یک پارامتر options اضافه کن که storage رو از اون دریافت کنه. اگه storage داده نشد، از یک حافظه موقت (MemoryStorage) استفاده کنه.
+3. تمام جاهایی که از Storage.loadSettings() یا Storage.saveChat() و... استفاده شده، به this.storage.loadSettings() یا this.storage.saveChat() تبدیل بشه.
+4. یک فایل memoryStorage.js در پوشه services بساز که یک ذخیره‌ساز موقت در حافظه باشه (برای تست یا محیط‌هایی که IndexedDB ندارن).
+5. این فایل باید تمام متدهای storageService رو داشته باشه (loadSettings،  saveSettings، loadAllChats، saveChat، deleteChatById) اما داده‌ها رو در یک آبجکت جاوااسکریپت ساده نگه داره.
+6. در main.js، یک نمونه از IndexedDB storage بساز و اون رو به ChatEngine پاس بده.
+
+**توجه:**
+- این تغییر نباید عملکرد فعلی برنامه در مرورگر رو تغییر بده
+- فقط باعث میشه بشه storage رو از بیرون تزریق کرد
+- همه چیز باید مثل قبل کار کنه

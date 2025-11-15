@@ -1,5 +1,5 @@
 import EventEmitter from './eventEmitter.js';
-import * as Storage from '../services/storageService.js';
+import * as MemoryStorage from '../services/memoryStorage.js';
 import { streamGeminiResponse } from './providers/geminiProvider.js';
 import { streamOpenAIResponse } from './providers/openaiProvider.js';
 import { streamCustomResponse } from './providers/customProvider.js';
@@ -17,13 +17,18 @@ function generateMessageId() {
 }
 
 class ChatEngine extends EventEmitter {
-    constructor() {
+    /**
+     * @param {object} [options] - Configuration options.
+     * @param {object} [options.storage] - A storage provider implementing the storage service API.
+     */
+    constructor(options = {}) {
         super();
         this.chats = [];
         this.activeChatId = null;
         this.isLoading = false;
         this.settings = null;
         this.syncChannel = null;
+        this.storage = options.storage || MemoryStorage;
         this.providers = {
             gemini: streamGeminiResponse,
             openai: streamOpenAIResponse,
@@ -33,8 +38,8 @@ class ChatEngine extends EventEmitter {
 
     async init() {
         try {
-            this.settings = await Storage.loadSettings();
-            this.chats = await Storage.loadAllChats();
+            this.settings = await this.storage.loadSettings();
+            this.chats = await this.storage.loadAllChats();
             
             if (this.chats.length === 0) {
                 // Creates a new chat in memory, will be saved on first message
@@ -81,7 +86,7 @@ class ChatEngine extends EventEmitter {
 
     async handleSyncUpdate() {
         try {
-            this.chats = await Storage.loadAllChats();
+            this.chats = await this.storage.loadAllChats();
             const activeChatExists = this.chats.some(c => c.id === this.activeChatId);
 
             if (!activeChatExists) {
@@ -107,7 +112,7 @@ class ChatEngine extends EventEmitter {
         if (settings) {
             try {
                 this.settings = settings;
-                await Storage.saveSettings(settings);
+                await this.storage.saveSettings(settings);
                 this.emit('settingsSaved', settings);
             } catch (error) {
                 this.emit('error', error.message);
@@ -133,7 +138,7 @@ class ChatEngine extends EventEmitter {
             this.emit('activeChatSwitched', newChat);
             this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
             try {
-                await Storage.saveChat(newChat);
+                await this.storage.saveChat(newChat);
                 this.broadcastUpdate();
             } catch (error) {
                 this.emit('error', error.message);
@@ -157,7 +162,7 @@ class ChatEngine extends EventEmitter {
             chat.title = newTitle;
             chat.updatedAt = Date.now();
             try {
-                await Storage.saveChat(chat);
+                await this.storage.saveChat(chat);
                 this.broadcastUpdate();
                 this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
                 if (chat.id === this.activeChatId) {
@@ -172,7 +177,7 @@ class ChatEngine extends EventEmitter {
     async deleteChat(chatId) {
         this.chats = this.chats.filter(c => c.id !== chatId);
         try {
-            await Storage.deleteChatById(chatId);
+            await this.storage.deleteChatById(chatId);
             this.broadcastUpdate();
 
             if (this.activeChatId === chatId) {
@@ -275,7 +280,7 @@ class ChatEngine extends EventEmitter {
         } finally {
             activeChat.updatedAt = Date.now();
             try {
-                await Storage.saveChat(activeChat);
+                await this.storage.saveChat(activeChat);
                 this.broadcastUpdate();
             } catch (storageError) {
                 this.emit('error', storageError.message);

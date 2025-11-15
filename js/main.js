@@ -1,5 +1,6 @@
 import ChatEngine from './core/chatEngine.js';
 import ChatUI from './ui/chatUI.js';
+import * as IndexedDBStorage from './services/storageService.js';
 
 /**
  * Initializes the application when the DOM is fully loaded.
@@ -13,8 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // Instantiate the core logic and the UI handler
-        const chatEngine = new ChatEngine();
+        // Instantiate the core logic with a specific storage implementation
+        const chatEngine = new ChatEngine({ storage: IndexedDBStorage });
         const chatUI = new ChatUI(chatEngine, rootElement);
 
         // Ensure the UI is fully initialized before the engine starts emitting events
