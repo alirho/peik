@@ -31,7 +31,7 @@ class MessageRenderer {
 
     /**
      * Creates and appends a single message element to the container.
-     * @param {object} message The message object { role, content, image? }.
+     * @param {object} message The message object { id, role, content, image?, timestamp? }.
      * @param {boolean} isStreamingPlaceholder - If true, renders a typing indicator.
      * @returns {HTMLElement | null} The message bubble element if created, otherwise null.
      */
@@ -40,6 +40,7 @@ class MessageRenderer {
         
         if (message.role === 'user') {
             bubble.innerHTML = ''; // Clear default content
+            bubble.dataset.rawContent = message.content || '';
 
             if (message.image && message.image.data && message.image.mimeType) {
                 const imageWrapper = document.createElement('div');
@@ -156,6 +157,7 @@ class MessageRenderer {
     showWelcomeMessage() {
         const welcomeText = 'سلام! امروز چطور می‌توانم به شما کمک کنم؟';
         const { element, bubble } = this.createMessageElement({
+            id: `msg_welcome_${Date.now()}`,
             role: 'assistant',
             content: welcomeText,
         });
@@ -188,7 +190,8 @@ class MessageRenderer {
     createMessageElement(message) {
         const wrapper = document.createElement('div');
         wrapper.className = `message ${message.role === 'user' ? 'user' : 'assistant'}`;
-    
+        wrapper.dataset.messageId = message.id;
+
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
     
@@ -213,7 +216,7 @@ class MessageRenderer {
             copyButton.className = 'copy-button';
             copyButton.title = 'رونوشت';
             copyButton.innerHTML = `<span class="material-symbols-outlined">content_copy</span>`;
-            copyButton.addEventListener('click', () => this.handleCopy(copyButton, message, bubble));
+            copyButton.addEventListener('click', () => this.handleCopy(copyButton, message.id));
         }
     
         if (message.role === 'user') {
@@ -238,21 +241,24 @@ class MessageRenderer {
     /**
      * Handles the click event for the copy button on a message.
      * @param {HTMLButtonElement} button The button element that was clicked.
-     * @param {object} message The message object associated with the button.
-     * @param {HTMLElement} bubble The message bubble element.
+     * @param {string} messageId The ID of the message to copy.
      */
-    async handleCopy(button, message, bubble) {
-        // Determine the text to copy
-        let textToCopy = '';
-        if (message.role !== 'user') {
-            // For model/assistant, use the raw markdown content stored in the dataset
-            textToCopy = bubble.dataset.rawContent || message.content;
-        } else {
-            // For user, just use the text content
-            textToCopy = message.content;
+    async handleCopy(button, messageId) {
+        const wrapper = this.container.querySelector(`[data-message-id="${messageId}"]`);
+        if (!wrapper) {
+            console.error('Could not find message element for ID:', messageId);
+            return;
         }
 
-        if (!textToCopy) return; // Nothing to copy
+        const bubble = wrapper.querySelector('.message-bubble');
+        if (!bubble) {
+            console.error('Could not find message bubble for ID:', messageId);
+            return;
+        }
+        
+        const textToCopy = bubble.dataset.rawContent;
+
+        if (textToCopy === undefined || textToCopy === null || textToCopy.trim() === '') return;
 
         try {
             await navigator.clipboard.writeText(textToCopy);

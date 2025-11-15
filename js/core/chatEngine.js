@@ -6,6 +6,16 @@ import { streamCustomResponse } from './providers/customProvider.js';
 
 const SYNC_CHANNEL_NAME = 'goug-chat-sync';
 
+/**
+ * Generates a unique ID for a message.
+ * @returns {string} The unique message ID.
+ */
+function generateMessageId() {
+    const timestamp = Date.now();
+    const randomPart = Math.random().toString(36).substring(2, 9);
+    return `msg_${timestamp}_${randomPart}`;
+}
+
 class ChatEngine extends EventEmitter {
     constructor() {
         super();
@@ -26,6 +36,26 @@ class ChatEngine extends EventEmitter {
             this.settings = await Storage.loadSettings();
             this.chats = await Storage.loadAllChats();
             
+            // Migrate old messages without IDs or timestamps
+            let needsSave = false;
+            this.chats.forEach(chat => {
+                chat.messages.forEach(message => {
+                    if (!message.id) {
+                        message.id = generateMessageId();
+                        needsSave = true;
+                    }
+                    if (!message.timestamp) {
+                        // Use chat creation time as a reasonable fallback
+                        message.timestamp = chat.createdAt || Date.now();
+                        needsSave = true;
+                    }
+                });
+            });
+
+            if (needsSave) {
+                await Storage.saveAllChats(this.chats);
+            }
+
             if (this.chats.length === 0) {
                 // Creates a new chat in memory, will be saved on first message
                 this.startNewChat(false);
@@ -201,8 +231,15 @@ class ChatEngine extends EventEmitter {
         }
 
         this.setLoading(true);
+        
+        const now = Date.now();
+        const userMessage = {
+            id: generateMessageId(),
+            timestamp: now,
+            role: 'user',
+            content: userInput,
+        };
 
-        const userMessage = { role: 'user', content: userInput };
         if (image) {
             userMessage.image = image;
         }
@@ -223,7 +260,12 @@ class ChatEngine extends EventEmitter {
             this.emit('activeChatSwitched', activeChat);
         }
 
-        const modelMessage = { role: 'model', content: '' };
+        const modelMessage = {
+            id: generateMessageId(),
+            timestamp: Date.now(),
+            role: 'model',
+            content: '',
+        };
         activeChat.messages.push(modelMessage);
         this.emit('message', modelMessage);
 
