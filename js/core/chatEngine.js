@@ -1,8 +1,7 @@
 import EventEmitter from './eventEmitter.js';
 import * as MemoryStorage from '../services/memoryStorage.js';
+import { SYNC_CONFIG } from '../utils/constants.js';
 // Providers are now injected, so direct imports are removed.
-
-const SYNC_CHANNEL_NAME = 'goug-chat-sync';
 
 /**
  * Generates a unique ID for a message.
@@ -75,7 +74,7 @@ class ChatEngine extends EventEmitter {
     setupSyncChannel() {
         if ('BroadcastChannel' in window) {
             try {
-                this.syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+                this.syncChannel = new BroadcastChannel(SYNC_CONFIG.CHANNEL_NAME);
                 this.syncChannel.onmessage = (event) => {
                     if (event.data.type === 'update') {
                         this.handleSyncUpdate();

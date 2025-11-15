@@ -1,8 +1,5 @@
 import { ApiError } from '../utils/apiErrors.js';
-
-const MAX_RETRIES = 3;
-const INITIAL_DELAY_MS = 1000;
-const TIMEOUT_MS = 30000;
+import { API_CONFIG } from '../utils/constants.js';
 
 /**
  * A generic function to perform fetch requests with retry logic, timeout, and stream processing.
@@ -15,9 +12,9 @@ const TIMEOUT_MS = 30000;
 export async function fetchStreamWithRetries(url, options, processLine, getErrorMessage) {
     let lastError = null;
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < API_CONFIG.MAX_RETRIES; attempt++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT_MS);
 
         try {
             const response = await fetch(url, { ...options, signal: controller.signal });
@@ -59,8 +56,8 @@ export async function fetchStreamWithRetries(url, options, processLine, getError
         }
         
         // Wait before retrying
-        if (attempt < MAX_RETRIES - 1) {
-            await new Promise(resolve => setTimeout(resolve, INITIAL_DELAY_MS * Math.pow(2, attempt)));
+        if (attempt < API_CONFIG.MAX_RETRIES - 1) {
+            await new Promise(resolve => setTimeout(resolve, API_CONFIG.INITIAL_DELAY_MS * Math.pow(2, attempt)));
         }
     }
 

@@ -1,4 +1,5 @@
 import markdownService from '../../services/markdownService.js';
+import { UI_TIMEOUTS } from '../../utils/constants.js';
 
 /**
  * Manages rendering messages, typing indicators, and errors in the chat UI.
@@ -148,7 +149,7 @@ class MessageRenderer {
         setTimeout(() => {
             errorWrapper.style.opacity = '0';
             errorWrapper.addEventListener('transitionend', () => errorWrapper.remove());
-        }, 5000);
+        }, UI_TIMEOUTS.ERROR_DISPLAY_MS);
     }
     
     /**
@@ -273,7 +274,7 @@ class MessageRenderer {
                 button.innerHTML = `<span class="material-symbols-outlined">content_copy</span>`;
                 button.classList.remove('copied');
                 button.disabled = false;
-            }, 3000);
+            }, UI_TIMEOUTS.COPY_FEEDBACK_MS);
 
         } catch (err) {
             console.error('Failed to copy text: ', err);

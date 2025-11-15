@@ -2,6 +2,7 @@ import { loadTemplate } from './templateLoader.js';
 import MessageRenderer from './components/messageRenderer.js';
 import SettingsModal from './components/settingsModal.js';
 import SidebarManager from './components/sidebarManager.js';
+import { FILE_LIMITS, IMAGE_SETTINGS } from '../utils/constants.js';
 
 /**
  * Manages the entire UI, acting as an orchestrator for all UI components.
@@ -186,8 +187,6 @@ class ChatUI {
      * @param {function({data: string, mimeType: string} | null): void} callback The callback function with the compressed result, or null on error.
      */
     compressImage(dataUrl, originalMimeType, callback) {
-        const MAX_DIMENSION = 1200;
-        const QUALITY = 0.8;
         const outputMimeType = originalMimeType === 'image/png' ? 'image/png' : 'image/jpeg';
     
         const img = new Image();
@@ -197,13 +196,13 @@ class ChatUI {
             let { width, height } = img;
     
             // Calculate new dimensions if either width or height is too large
-            if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+            if (width > IMAGE_SETTINGS.MAX_DIMENSION || height > IMAGE_SETTINGS.MAX_DIMENSION) {
                 if (width > height) {
-                    height = Math.round((height * MAX_DIMENSION) / width);
-                    width = MAX_DIMENSION;
+                    height = Math.round((height * IMAGE_SETTINGS.MAX_DIMENSION) / width);
+                    width = IMAGE_SETTINGS.MAX_DIMENSION;
                 } else {
-                    width = Math.round((width * MAX_DIMENSION) / height);
-                    height = MAX_DIMENSION;
+                    width = Math.round((width * IMAGE_SETTINGS.MAX_DIMENSION) / height);
+                    height = IMAGE_SETTINGS.MAX_DIMENSION;
                 }
             }
     
@@ -220,7 +219,7 @@ class ChatUI {
                 compressedDataUrl = canvas.toDataURL(outputMimeType);
             } else {
                 // For JPEG and other types, re-encode with quality setting
-                compressedDataUrl = canvas.toDataURL('image/jpeg', QUALITY);
+                compressedDataUrl = canvas.toDataURL('image/jpeg', IMAGE_SETTINGS.COMPRESSION_QUALITY);
             }
     
             const base64Data = compressedDataUrl.split(',')[1];
@@ -248,16 +247,15 @@ class ChatUI {
             return;
         }
     
-        const MAX_ORIGINAL_FILE_SIZE_MB = 10;
-        if (file.size > MAX_ORIGINAL_FILE_SIZE_MB * 1024 * 1024) {
-            this.engine.emit('error', `حجم فایل نباید بیشتر از ${MAX_ORIGINAL_FILE_SIZE_MB} مگابایت باشد.`);
+        if (file.size > FILE_LIMITS.MAX_ORIGINAL_FILE_SIZE_MB * 1024 * 1024) {
+            this.engine.emit('error', `حجم فایل نباید بیشتر از ${FILE_LIMITS.MAX_ORIGINAL_FILE_SIZE_MB} مگابایت باشد.`);
             return;
         }
     
         const reader = new FileReader();
         reader.onload = (e) => {
             const dataUrl = e.target.result;
-            const COMPRESSION_THRESHOLD_BYTES = 2 * 1024 * 1024;
+            const COMPRESSION_THRESHOLD_BYTES = FILE_LIMITS.COMPRESSION_THRESHOLD_MB * 1024 * 1024;
     
             // Skip compression for GIFs to preserve animation.
             if (file.size > COMPRESSION_THRESHOLD_BYTES && file.type !== 'image/gif') {
