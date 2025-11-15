@@ -1,8 +1,6 @@
 import EventEmitter from './eventEmitter.js';
 import * as MemoryStorage from '../services/memoryStorage.js';
-import { streamGeminiResponse } from './providers/geminiProvider.js';
-import { streamOpenAIResponse } from './providers/openaiProvider.js';
-import { streamCustomResponse } from './providers/customProvider.js';
+// Providers are now injected, so direct imports are removed.
 
 const SYNC_CHANNEL_NAME = 'goug-chat-sync';
 
@@ -20,6 +18,7 @@ class ChatEngine extends EventEmitter {
     /**
      * @param {object} [options] - Configuration options.
      * @param {object} [options.storage] - A storage provider implementing the storage service API.
+     * @param {object} [options.providers] - A map of provider names to their handler functions.
      */
     constructor(options = {}) {
         super();
@@ -29,11 +28,22 @@ class ChatEngine extends EventEmitter {
         this.settings = null;
         this.syncChannel = null;
         this.storage = options.storage || MemoryStorage;
-        this.providers = {
-            gemini: streamGeminiResponse,
-            openai: streamOpenAIResponse,
-            custom: streamCustomResponse,
-        };
+
+        this.providers = new Map();
+        if (options.providers) {
+            for (const name in options.providers) {
+                this.registerProvider(name, options.providers[name]);
+            }
+        }
+    }
+
+    /**
+     * Registers a new provider handler.
+     * @param {string} name - The name of the provider (e.g., 'gemini').
+     * @param {Function} handler - The async function that handles the streaming response.
+     */
+    registerProvider(name, handler) {
+        this.providers.set(name, handler);
     }
 
     async init() {
@@ -209,7 +219,7 @@ class ChatEngine extends EventEmitter {
         const activeChat = this.getActiveChat();
         if (!activeChat) return;
 
-        const providerStreamer = this.providers[this.settings.provider];
+        const providerStreamer = this.providers.get(this.settings.provider);
         if (!providerStreamer) {
             this.emit('error', `ارائه‌دهنده ${this.settings.provider} پشتیبانی نمی‌شود.`);
             return;

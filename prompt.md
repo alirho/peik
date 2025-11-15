@@ -575,3 +575,21 @@ Uncaught SyntaxError: The requested module 'http://127.0.0.1:8000/js/lib/markdow
 - مثال IndexedDB
 - مثال FileSystem برای Node.js
 - نکات مهم
+
+### پرامپت ۵۵
+می‌خوام سیستم مدیریت Provider‌ها رو بهبود بدی تا بتونیم به راحتی Provider جدید اضافه کنیم بدون اینکه کد هسته ChatEngine رو تغییر بدیم:
+1. ChatEngine نباید مستقیماً Provider‌ها رو import کنه. به جاش، یک Map خالی برای providers داشته باشه.
+2. یک متد registerProvider(name, handler) به ChatEngine اضافه کن که بتونیم Provider جدید ثبت کنیم.
+3. در constructor، اگه در options یک لیست providers داده شده، اون‌ها رو به صورت خودکار ثبت کنه.
+4. در main.js، Provider‌های مورد نیاز (Gemini، OpenAI، Custom) رو import کن و به ChatEngine پاس بده.
+5. می‌تونه به دو صورت باشه:
+   - یا همه رو در constructor پاس بدیم
+   - یا بعد از ساخت engine، با registerProvider ثبت کنیم
+
+**نتیجه:**
+- اگه کسی فقط از Gemini استفاده می‌کنه، فقط اون رو import کنه
+- اگه کسی Provider جدید می‌خواد بنویسه (مثل Anthropic)، فقط 
+  registerProvider صدا بزنه
+- کد هسته ChatEngine دیگه به هیچ Provider خاصی وابسته نیست
+
+توجه: این تغییر نباید عملکرد فعلی رو خراب کنه.

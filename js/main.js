@@ -1,6 +1,9 @@
 import ChatEngine from './core/chatEngine.js';
 import ChatUI from './ui/chatUI.js';
 import * as IndexedDBStorage from './services/storageService.js';
+import { streamGeminiResponse } from './core/providers/geminiProvider.js';
+import { streamOpenAIResponse } from './core/providers/openaiProvider.js';
+import { streamCustomResponse } from './core/providers/customProvider.js';
 
 /**
  * Initializes the application when the DOM is fully loaded.
@@ -14,8 +17,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        // Instantiate the core logic with a specific storage implementation
-        const chatEngine = new ChatEngine({ storage: IndexedDBStorage });
+        // Instantiate the core logic with injected storage and providers
+        const chatEngine = new ChatEngine({
+            storage: IndexedDBStorage,
+            providers: {
+                gemini: streamGeminiResponse,
+                openai: streamOpenAIResponse,
+                custom: streamCustomResponse,
+            }
+        });
         const chatUI = new ChatUI(chatEngine, rootElement);
 
         // Ensure the UI is fully initialized before the engine starts emitting events
