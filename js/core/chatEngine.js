@@ -105,7 +105,7 @@ class ChatEngine extends EventEmitter {
                 image: { ...baseLimits.image, ...(preset.image || {}) },
             };
         } else if (typeof limitsConfig === 'object') {
-            const custom = limitsConfig;
+            const custom = customLimits;
             baseLimits = {
                 ...baseLimits,
                 ...custom,

@@ -92,6 +92,7 @@ export const PRESET_LIMITS = {
             ...DEFAULT_LIMITS.image,
             maxOriginalDimension: Infinity,
             maxFinalDimension: Infinity,
+            maxAspectRatio: Infinity,
         }
     }
 };

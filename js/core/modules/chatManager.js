@@ -60,6 +60,8 @@ class ChatManager {
             this.engine.activeChatId = chatId;
             this.engine.emit('activeChatSwitched', chatToActivate);
             this.engine.emit('chatListUpdated', { chats: this.engine.chats, activeChatId: this.engine.activeChatId });
+        } else {
+             console.warn(`Chat with ID ${chatId} not found for switching.`);
         }
     }
 
@@ -70,15 +72,15 @@ class ChatManager {
      * @returns {Promise<void>}
      */
     async renameChat(chatId, newTitle) {
-        if (typeof newTitle !== 'string' || !newTitle.trim()) {
+        const sanitizedTitle = (newTitle || '').trim().replace(/[\r\n\0]/g, '').replace(/\s+/g, ' ');
+
+        if (!sanitizedTitle) {
             this.engine.emit('error', 'نام گپ نمی‌تواند خالی باشد.');
             return;
         }
-
-        const sanitizedTitle = newTitle.trim().replace(/[\r\n\0]/g, '');
+        
         const { maxChatTitleLength } = this.engine.limits;
-
-        if (sanitizedTitle.length > maxChatTitleLength) {
+        if (maxChatTitleLength !== Infinity && sanitizedTitle.length > maxChatTitleLength) {
             this.engine.emit('error', `نام گپ نمی‌تواند بیشتر از ${maxChatTitleLength} کاراکتر باشد.`);
             return;
         }

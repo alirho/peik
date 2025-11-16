@@ -66,6 +66,16 @@ class InputManager {
         }
 
         this.isSubmitting = true;
+        this.updateSendButtonState(true); // Visually indicate loading immediately
+
+        // Safety timeout to prevent the UI from getting stuck in a submitting state
+        setTimeout(() => {
+            if (this.isSubmitting) {
+                console.warn('Submission safety timeout triggered. Resetting UI state.');
+                this.updateSendButtonState(false);
+            }
+        }, 30000); // 30 seconds
+
         this.onSendMessage(userInput, image);
     }
 
@@ -140,6 +150,8 @@ class InputManager {
     updateSendButtonState(isLoading) {
         const button = this.dom.sendButton;
         const attachButton = this.dom.attachFileButton;
+        this.isSubmitting = isLoading; // Sync submission state with loading state
+
         if (isLoading) {
             button.disabled = true;
             attachButton.disabled = true;
@@ -148,7 +160,6 @@ class InputManager {
             button.disabled = false;
             attachButton.disabled = false;
             button.innerHTML = '<span class="material-symbols-outlined">send</span>';
-            this.isSubmitting = false; // Reset submission guard when loading finishes
         }
     }
 }

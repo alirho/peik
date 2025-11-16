@@ -36,7 +36,7 @@ class MessageHandler {
         const { maxMessageLength, maxMessagesPerChat } = this.engine.limits;
 
         // --- Provider and Settings Validation ---
-        if (!this.engine.settings || (!this.engine.settings.apiKey && this.engine.settings.provider !== 'custom')) {
+        if (!this.engine.settings || !this.engine.settings.provider || (!this.engine.settings.apiKey && this.engine.settings.provider !== 'custom')) {
             this.engine.emit('error', 'تنظیمات API صحیح نیست. لطفاً تنظیمات را بررسی کنید.');
             return;
         }
@@ -55,7 +55,7 @@ class MessageHandler {
             this.engine.emit('error', 'ورودی پیام نامعتبر است.');
             return;
         }
-        if (hasText && userInput.length > maxMessageLength) {
+        if (maxMessageLength !== Infinity && hasText && userInput.length > maxMessageLength) {
             this.engine.emit('error', `متن پیام نمی‌تواند بیشتر از ${maxMessageLength} کاراکتر باشد.`);
             return;
         }

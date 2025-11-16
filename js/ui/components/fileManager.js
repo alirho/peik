@@ -42,22 +42,26 @@ class FileManager {
         this.fileInput.value = '';
     
         const extension = (file.name.split('.').pop() || '').toLowerCase();
-        if (!limits.file.allowedMimeTypes.includes(file.type) || !limits.file.allowedExtensions.includes(extension)) {
+        const isMimeAllowed = limits.file.allowedMimeTypes.includes('*/*') || limits.file.allowedMimeTypes.includes(file.type);
+        const isExtAllowed = limits.file.allowedExtensions.includes('*') || limits.file.allowedExtensions.includes(extension);
+
+        if (!isMimeAllowed || !isExtAllowed) {
             this.engine.emit('error', `فرمت فایل '${extension}' مجاز نیست.`);
             return;
         }
     
-        if (file.size > limits.file.maxOriginalFileSizeBytes) {
-            this.engine.emit('error', `حجم فایل نباید بیشتر از ${limits.file.maxOriginalFileSizeBytes / 1024 / 1024} مگابایت باشد.`);
+        if (limits.file.maxOriginalFileSizeBytes !== Infinity && file.size > limits.file.maxOriginalFileSizeBytes) {
+            this.engine.emit('error', `حجم فایل نباید بیشتر از ${(limits.file.maxOriginalFileSizeBytes / 1024 / 1024).toFixed(1)} مگابایت باشد.`);
             return;
         }
     
         const reader = new FileReader();
         reader.onload = (e) => {
             const dataUrl = e.target.result;
-            const COMPRESSION_THRESHOLD_BYTES = 2 * 1024 * 1024; // Use a fixed 2MB threshold
-    
-            if (file.size > COMPRESSION_THRESHOLD_BYTES && file.type !== 'image/gif') {
+            // Compress if it's not a GIF and compression is not disabled via unlimited preset
+            const shouldCompress = file.type !== 'image/gif' && limits.file.maxCompressedSizeBytes !== Infinity;
+
+            if (shouldCompress) {
                 this.compressImage(dataUrl, file.type, (compressedResult) => {
                     if (compressedResult) {
                         this.onFileProcessed(compressedResult);
@@ -98,24 +102,22 @@ class FileManager {
 
         img.onload = () => {
             // Validate original dimensions and aspect ratio
-            if (img.width > limits.image.maxOriginalDimension || img.height > limits.image.maxOriginalDimension) {
+            if (limits.image.maxOriginalDimension !== Infinity && (img.width > limits.image.maxOriginalDimension || img.height > limits.image.maxOriginalDimension)) {
                 this.engine.emit('error', `ابعاد تصویر (${img.width}x${img.height}) نباید از ${limits.image.maxOriginalDimension} پیکسل بیشتر باشد.`);
                 cleanup();
-                callback(null);
-                return;
+                return callback(null);
             }
             const aspectRatio = Math.max(img.width, img.height) / Math.min(img.width, img.height);
-            if (aspectRatio > limits.image.maxAspectRatio) {
+            if (limits.image.maxAspectRatio !== Infinity && aspectRatio > limits.image.maxAspectRatio) {
                  this.engine.emit('error', `نسبت ابعاد تصویر (${aspectRatio.toFixed(1)}) بیش از حد مجاز (${limits.image.maxAspectRatio}) است.`);
                  cleanup();
-                 callback(null);
-                 return;
+                 return callback(null);
             }
 
             let { width, height } = img;
     
             // Resize if needed
-            if (width > limits.image.maxFinalDimension || height > limits.image.maxFinalDimension) {
+            if (limits.image.maxFinalDimension !== Infinity && (width > limits.image.maxFinalDimension || height > limits.image.maxFinalDimension)) {
                 if (width > height) {
                     height = Math.round((height * limits.image.maxFinalDimension) / width);
                     width = limits.image.maxFinalDimension;
@@ -135,11 +137,10 @@ class FileManager {
             
             // Validate compressed size (approximate)
             const compressedSizeBytes = base64Data.length * (3 / 4);
-            if (compressedSizeBytes > limits.file.maxCompressedSizeBytes) {
+            if (limits.file.maxCompressedSizeBytes !== Infinity && compressedSizeBytes > limits.file.maxCompressedSizeBytes) {
                 this.engine.emit('error', `حجم فایل فشرده شده (${(compressedSizeBytes / 1024 / 1024).toFixed(1)}MB) بیشتر از حد مجاز است.`);
                 cleanup();
-                callback(null);
-                return;
+                return callback(null);
             }
 
             callback({ 

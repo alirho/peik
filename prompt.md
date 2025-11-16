@@ -847,3 +847,25 @@ js/ui/
 نکته‌ها:
 - پیام‌های خطا به فارسی و واضح
 - تمام validation ها با limits قابل پیکربندی کار کنن
+
+### پرامپت ۶۹
+هدف: رفع باگ‌های باقی‌مانده در سیستم validation
+1. رفع باگ wildcard در fileManager.js: در متد handleFileSelect
+    - چک کردن allowedExtensions و allowedMimeTypes باید wildcard رو پشتیبانی کنه
+    - اگر آرایه شامل '*' یا '*/*' بود، همه فرمت‌ها مجاز هستن
+    - وگرنه از includes استفاده کن
+2 .جلوگیری از نمایش Infinity، در fileManager.js:
+    - قبل از نمایش پیام خطای حجم فایل، چک کن که limit برابر Infinity نباشه
+    - عدد رو با toFixed(1) نمایش بده
+    - در compressImage: همین کار برای حجم فشرده شده
+3. اضافه کردن safety timeout در inputManager.js متد submit:
+    - یک setTimeout اضافه کن که بعد 30 ثانیه isSubmitting رو false کنه
+    - این یک اقدام ایمنی برای حالت‌های استثنایی‌ست
+4. بهبود sanitization، در chatManager.renameChat:
+    - بعد از trim و replace، فاصه‌های متوالی رو به یک فاصه تبدیل کن
+    - چک کن اگر بعد sanitize خالی شد، خطا بده
+
+انتظار:
+- باگ preset unlimited برطرف بشه
+- پیام‌های خطا همیشه معقول باشن
+- UI هیچ وقت قفل نشه
