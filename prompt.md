@@ -703,3 +703,26 @@ Uncaught SyntaxError: The requested module 'http://127.0.0.1:8000/js/lib/markdow
 4. همین منطق رو برای event listener کلید Enter هم اعمال کن.
 
 **نکته:** این یک جلوگیری ساده از spam است، نه یک Rate Limiting پیچیده.
+
+### پرامپت ۶۳
+می‌خوام chatEngine.js رو بازسازی کنی و به ماژول‌های کوچکتر تقسیم کنی:
+1. مدیریت چت‌ها
+2. مدیریت ارسال پیام
+3. مدیریت ذخیره‌سازی هوشمند
+4. همگام‌سازی بین تب‌ها
+5. فایل اصلی فقط هماهنگی را انجام بده
+
+**هدف:** هر فایل حداکثر 200 خط و یک مسئولیت مشخص داشته باشه.
+
+- هر ماژول باید constructor بگیره که chatEngine رو دریافت کنه
+- از this.engine برای دسترسی به چیزهای مشترک استفاده کنن
+- Event‌ها از طریق chatEngine emit بشن
+- JSDoc کامل برای همه
+- Import/Export صحیح
+- حفظ عملکرد فعلی (Backward Compatible)
+- ساختار پشنهادی:
+```
+js/core/
+├── chatEngine.js (150 خط - Orchestrator)
+├── modules/
+```
