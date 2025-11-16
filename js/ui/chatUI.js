@@ -100,8 +100,18 @@ class ChatUI {
             if (!this.isSettingsValid(settings)) {
                 this.settingsModal.show(true);
             }
-            this.sidebarManager.render(chats, activeChat.id);
-            this.updateChatView(activeChat);
+
+            // Add a guard to prevent crash on initialization
+            if (activeChat) {
+                this.sidebarManager.render(chats, activeChat.id);
+                this.updateChatView(activeChat);
+            } else {
+                // This case can happen on first load if something went wrong creating the initial chat.
+                // We'll render an empty state.
+                console.warn('Initial active chat was not available. Rendering empty state.');
+                this.sidebarManager.render(chats, null);
+                this.messageRenderer.showWelcomeMessage();
+            }
         });
 
         this.engine.on('chatListUpdated', ({ chats, activeChatId }) => {

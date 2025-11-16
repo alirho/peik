@@ -875,3 +875,16 @@ js/ui/
 
 ### پرامپت ۷۱
 اگر سندهای دیگه هم نیاز به بروزرسانی دارن انجام بده.
+
+### پرامپت ۷۲
+در کنسول مرورگر خطای زیر نمایش داده می‌شه:
+
+```js
+Error in listener for event "init": TypeError: can't access property "id", activeChat is undefined
+    bindCoreEvents http://localhost:3000/js/ui/chatUI.js:103
+    emit http://localhost:3000/js/core/eventEmitter.js:31
+    emit http://localhost:3000/js/core/eventEmitter.js:29
+    init http://localhost:3000/js/core/chatEngine.js:146
+    async* http://localhost:3000/js/main.js:39
+    async* http://localhost:3000/js/main.js:17
+```
