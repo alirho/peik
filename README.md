@@ -119,7 +119,7 @@ goug/
 │   │       ├── ...
 │   ├── services/           # سرویس‌های خارجی (API, Storage)
 │   │   ├── apiService.js
-│   │   └── storageService.js # پیاده‌سازی IndexedDB
+│   │   └── indexedDBStorage.js # پیاده‌سازی IndexedDB
 │   ├── ui/                 # منطق رابط کاربری (UI)
 │   │   ├── chatUI.js       # ارکستراتور اصلی UI
 │   │   ├── templateLoader.js # بارگذاری قالب‌های HTML

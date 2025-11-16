@@ -1,10 +1,8 @@
 import EventEmitter from './eventEmitter.js';
-import * as MemoryStorage from '../services/memoryStorage.js';
 import ChatManager from './modules/chatManager.js';
 import MessageHandler from './modules/messageHandler.js';
 import StorageManager from './modules/storageManager.js';
 import SyncManager from './modules/syncManager.js';
-
 
 // JSDoc Type Imports
 /** @typedef {import('../types.js').Settings} Settings */
@@ -12,6 +10,24 @@ import SyncManager from './modules/syncManager.js';
 /** @typedef {import('../types.js').ImageData} ImageData */
 /** @typedef {import('../types.js').StorageAdapter} StorageAdapter */
 /** @typedef {import('../types.js').ProviderHandler} ProviderHandler */
+
+/**
+ * Creates a simple in-memory storage adapter that conforms to the StorageAdapter interface.
+ * This is used as a fallback when no persistent storage is provided to the ChatEngine.
+ * @returns {StorageAdapter}
+ */
+const createInMemoryStorage = () => {
+    let settings = null;
+    const chats = new Map();
+
+    return {
+        async loadSettings() { return settings; },
+        async saveSettings(newSettings) { settings = newSettings; },
+        async loadAllChats() { return Array.from(chats.values()); },
+        async saveChat(chat) { chats.set(chat.id, JSON.parse(JSON.stringify(chat))); },
+        async deleteChatById(chatId) { chats.delete(chatId); }
+    };
+};
 
 /**
  * موتور اصلی برنامه که وضعیت گفتگوها، ارتباط با ارائه‌دهندگان و ذخیره‌سازی را مدیریت می‌کند.
@@ -36,7 +52,21 @@ class ChatEngine extends EventEmitter {
         /** @type {Settings | null} */
         this.settings = null;
         /** @type {StorageAdapter} */
-        this.storage = options.storage || MemoryStorage;
+        this.storage = options.storage;
+        if (!this.storage) {
+            this.storage = createInMemoryStorage();
+            console.warn(`
+/******************************************************************\\
+* GOUG WARNING: No storage adapter provided.                     *
+* The application will run in-memory mode.                       *
+* All chats and settings will be lost on page refresh.           *
+*                                                                *
+* To persist data, provide a storage adapter during              *
+* ChatEngine initialization.                                     *
+* See: docs/storageAdaptorGuide.md                               *
+\\******************************************************************/
+            `);
+        }
         /** @type {Map<string, ProviderHandler>} */
         this.providers = new Map();
         

@@ -13,7 +13,7 @@
 **نحوه نمونه‌سازی:**
 ```javascript
 import ChatEngine from './core/chatEngine.js';
-import * as IndexedDBStorage from './services/storageService.js';
+import * as IndexedDBStorage from './services/indexedDBStorage.js';
 import { streamGeminiResponse } from './core/providers/geminiProvider.js';
 
 const chatEngine = new ChatEngine({

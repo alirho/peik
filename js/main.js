@@ -1,9 +1,15 @@
 import ChatEngine from './core/chatEngine.js';
 import ChatUI from './ui/chatUI.js';
-import * as IndexedDBStorage from './services/storageService.js';
 import { streamGeminiResponse } from './core/providers/geminiProvider.js';
 import { streamOpenAIResponse } from './core/providers/openaiProvider.js';
 import { streamCustomResponse } from './core/providers/customProvider.js';
+
+// --- Storage Implementation ---
+// The ChatEngine is designed to be storage-agnostic. We are injecting
+// the IndexedDB adapter here to provide persistent storage for the web app.
+// Another adapter (e.g., for a file system in Node.js) could be used
+// without changing the core engine. See `docs/storageAdaptorGuide.md`.
+import * as IndexedDBStorage from './services/indexedDBStorage.js';
 
 /**
  * Initializes the application when the DOM is fully loaded.

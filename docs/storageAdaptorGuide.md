@@ -84,7 +84,7 @@ export async function deleteChatById(chatId) {
 این پیاده‌سازی در برنامه وب اصلی استفاده شده است و داده‌ها را به صورت پایدار در مرورگر کاربر ذخیره می‌کند.
 
 ```javascript
-// js/services/storageService.js (خلاصه شده)
+// js/services/indexedDBStorage.js (خلاصه شده)
 
 const DB_NAME = 'GougDB';
 const DB_VERSION = 1;
