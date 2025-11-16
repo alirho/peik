@@ -1,6 +1,6 @@
 import EventEmitter from './eventEmitter.js';
 import * as MemoryStorage from '../services/memoryStorage.js';
-import { SYNC_CONFIG, VALIDATION_LIMITS } from '../utils/constants.js';
+import { SYNC_CONFIG, VALIDATION_LIMITS, STORAGE_CONFIG } from '../utils/constants.js';
 // Providers are now injected, so direct imports are removed.
 
 /**
@@ -27,6 +27,9 @@ class ChatEngine extends EventEmitter {
         this.settings = null;
         this.syncChannel = null;
         this.storage = options.storage || MemoryStorage;
+
+        this.unsavedChats = [];
+        this.unsavedRetryInterval = null;
 
         this.providers = new Map();
         if (options.providers) {
@@ -146,12 +149,7 @@ class ChatEngine extends EventEmitter {
         if (emitUpdate) {
             this.emit('activeChatSwitched', newChat);
             this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
-            try {
-                await this.storage.saveChat(newChat);
-                this.broadcastUpdate();
-            } catch (error) {
-                this.emit('error', error.message);
-            }
+            await this.saveWithRetry(newChat);
         }
     }
     
@@ -182,15 +180,10 @@ class ChatEngine extends EventEmitter {
         if (chat) {
             chat.title = trimmedTitle;
             chat.updatedAt = Date.now();
-            try {
-                await this.storage.saveChat(chat);
-                this.broadcastUpdate();
-                this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
-                if (chat.id === this.activeChatId) {
-                     this.emit('activeChatSwitched', chat);
-                }
-            } catch (error) {
-                this.emit('error', error.message);
+            await this.saveWithRetry(chat);
+            this.emit('chatListUpdated', { chats: this.chats, activeChatId: this.activeChatId });
+            if (chat.id === this.activeChatId) {
+                 this.emit('activeChatSwitched', chat);
             }
         }
     }
@@ -318,12 +311,7 @@ class ChatEngine extends EventEmitter {
             this.emit('error', errorMessage);
         } finally {
             activeChat.updatedAt = Date.now();
-            try {
-                await this.storage.saveChat(activeChat);
-                this.broadcastUpdate();
-            } catch (storageError) {
-                this.emit('error', storageError.message);
-            }
+            await this.saveWithRetry(activeChat);
             this.emit('streamEnd', fullResponse);
             this.setLoading(false);
         }
@@ -332,6 +320,94 @@ class ChatEngine extends EventEmitter {
     setLoading(state) {
         this.isLoading = state;
         this.emit('loading', this.isLoading);
+    }
+
+    // --- Storage Error Handling ---
+
+    /**
+     * Tries to save a chat with a retry mechanism.
+     * @param {object} chat The chat object to save.
+     * @returns {Promise<boolean>} A promise that resolves to true on success, false on failure.
+     */
+    async saveWithRetry(chat) {
+        for (let attempt = 0; attempt < STORAGE_CONFIG.MAX_SAVE_RETRIES; attempt++) {
+            try {
+                await this.storage.saveChat(chat);
+                // On success, also remove it from the unsaved list if it was there
+                const index = this.unsavedChats.findIndex(c => c.id === chat.id);
+                if (index > -1) {
+                    this.unsavedChats.splice(index, 1);
+                    this.emit('success', `گپ "${chat.title}" که قبلا ذخیره نشده بود، با موفقیت ذخیره شد.`);
+                }
+                this.broadcastUpdate();
+                return true; // Indicate success
+            } catch (error) {
+                console.error(`Save attempt ${attempt + 1} failed for chat ${chat.id}:`, error);
+                if (attempt < STORAGE_CONFIG.MAX_SAVE_RETRIES - 1) {
+                    await new Promise(resolve => setTimeout(resolve, STORAGE_CONFIG.SAVE_RETRY_DELAY_MS));
+                } else {
+                    this.handleSaveFailure(chat, error);
+                }
+            }
+        }
+        return false; // Indicate failure
+    }
+
+    /**
+     * Handles the final failure of a save operation by adding the chat to an unsaved queue.
+     * @param {object} chat The chat that failed to save.
+     * @param {Error} error The final error object.
+     */
+    handleSaveFailure(chat, error) {
+        // Avoid adding duplicates
+        if (!this.unsavedChats.some(c => c.id === chat.id)) {
+            this.unsavedChats.push(chat);
+        }
+        
+        this.emit('error', `ذخیره‌سازی ناموفق بود. برنامه به صورت خودکار دوباره تلاش خواهد کرد. لطفاً صفحه را بازنشانی نکنید!`);
+
+        // Start the retry interval if it's not already running
+        if (!this.unsavedRetryInterval) {
+            this.startUnsavedRetryInterval();
+        }
+    }
+
+    /**
+     * Starts a periodic timer to re-attempt saving chats from the unsaved queue.
+     */
+    startUnsavedRetryInterval() {
+        this.unsavedRetryInterval = setInterval(() => {
+            this.retryUnsavedChats();
+        }, STORAGE_CONFIG.UNSAVED_RETRY_INTERVAL_MS);
+    }
+
+    /**
+     * Iterates through the unsaved chats and attempts to save them again.
+     */
+    async retryUnsavedChats() {
+        if (this.unsavedChats.length === 0) {
+            clearInterval(this.unsavedRetryInterval);
+            this.unsavedRetryInterval = null;
+            return;
+        }
+
+        console.log(`Attempting to save ${this.unsavedChats.length} unsaved chat(s)...`);
+        
+        const stillUnsaved = [];
+        for (const chat of this.unsavedChats) {
+            try {
+                await this.storage.saveChat(chat);
+                this.broadcastUpdate();
+                this.emit('success', `گپ "${chat.title}" با موفقیت ذخیره شد.`);
+            } catch (error) {
+                // If it fails again, keep it in the list for the next attempt
+                stillUnsaved.push(chat);
+            }
+        }
+
+        this.unsavedChats = stillUnsaved;
+
+        // If all chats are saved, the list will be empty and the interval will be cleared on the next run.
     }
 }
 

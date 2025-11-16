@@ -37,3 +37,10 @@ export const VALIDATION_LIMITS = {
     MAX_MESSAGE_LENGTH: 50000,
     MAX_CHAT_TITLE_LENGTH: 100,
 };
+
+// Storage related configurations
+export const STORAGE_CONFIG = {
+    MAX_SAVE_RETRIES: 3,
+    SAVE_RETRY_DELAY_MS: 1000,
+    UNSAVED_RETRY_INTERVAL_MS: 10000,
+};

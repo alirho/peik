@@ -135,20 +135,42 @@ class MessageRenderer {
      * @param {string} errorMessage The error message to display.
      */
     displayTemporaryError(errorMessage) {
-        const errorWrapper = document.createElement('div');
-        errorWrapper.className = 'error-message-wrapper';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'system-message-wrapper';
 
-        const errorBubble = document.createElement('div');
-        errorBubble.className = 'error-message-bubble';
-        errorBubble.textContent = errorMessage; // Use textContent for security
+        const bubble = document.createElement('div');
+        bubble.className = 'system-message-bubble error';
+        bubble.textContent = errorMessage; // Use textContent for security
 
-        errorWrapper.appendChild(errorBubble);
-        this.container.appendChild(errorWrapper);
+        wrapper.appendChild(bubble);
+        this.container.appendChild(wrapper);
         this.scrollToBottom();
 
         setTimeout(() => {
-            errorWrapper.style.opacity = '0';
-            errorWrapper.addEventListener('transitionend', () => errorWrapper.remove());
+            wrapper.style.opacity = '0';
+            wrapper.addEventListener('transitionend', () => wrapper.remove());
+        }, UI_TIMEOUTS.ERROR_DISPLAY_MS);
+    }
+    
+    /**
+     * Displays a temporary success message in the chat.
+     * @param {string} successMessage The success message to display.
+     */
+    displayTemporarySuccess(successMessage) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'system-message-wrapper';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'system-message-bubble success';
+        bubble.textContent = successMessage;
+
+        wrapper.appendChild(bubble);
+        this.container.appendChild(wrapper);
+        this.scrollToBottom();
+
+        setTimeout(() => {
+            wrapper.style.opacity = '0';
+            wrapper.addEventListener('transitionend', () => wrapper.remove());
         }, UI_TIMEOUTS.ERROR_DISPLAY_MS);
     }
     

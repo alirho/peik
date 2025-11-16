@@ -141,6 +141,7 @@ class ChatUI {
         });
         
         this.engine.on('error', (errorMessage) => this.messageRenderer.displayTemporaryError(errorMessage));
+        this.engine.on('success', (successMessage) => this.messageRenderer.displayTemporarySuccess(successMessage));
 
         this.engine.on('messageRemoved', () => this.messageRenderer.removeLastMessage());
     }
