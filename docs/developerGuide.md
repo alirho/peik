@@ -8,7 +8,7 @@
 
 ### `ChatEngine` API
 
-`ChatEngine` مغز متفکر برنامه است. تمام تعاملات UI با این کلاس انجام می‌شود.
+`ChatEngine` ارکستراتور اصلی هسته برنامه است. تمام تعاملات UI با این کلاس انجام می‌شود.
 
 **نحوه نمونه‌سازی:**
 ```javascript
@@ -36,9 +36,9 @@ const chatEngine = new ChatEngine({
 | `loading`              | `isLoading: boolean`                                  | هنگام شروع و پایان یک درخواست API، برای به‌روزرسانی وضعیت UI (مثلاً نمایش اسپینر) فراخوانی می‌شود.       |
 | `message`              | `message: object`                                     | هنگامی که یک پیام جدید (توسط کاربر یا دستیار) به چت فعال اضافه می‌شود، فراخوانی می‌شود.                  |
 | `chunk`                | `chunk: string`                                       | برای هر قطعه از متنی که از طریق استریم دریافت می‌شود، فراخوانی می‌شود.                                      |
-| `streamEnd`            | `fullResponse: string`                                | پس از اتمام کامل استریم پاسخ، با متن کامل پاسخ فراخوانی می‌شود.                                         |
-| `error`                | `errorMessage: string`                                | در صورت بروز خطا در ارتباط با API، با پیام خطا فراخوانی می‌شود.                                           |
-| `success`              | `successMessage: string`                              | در صورت موفقیت یک عملیات (مانند ذخیره‌سازی مجدد) فراخوانی می‌شود.                                           |
+| `streamEnd`            | `undefined`                                           | پس از اتمام کامل استریم پاسخ، فراخوانی می‌شود.                                                          |
+| `error`                | `errorMessage: string`                                | در صورت بروز خطا (API، اعتبارسنجی، ذخیره‌سازی)، با پیام خطا فراخوانی می‌شود.                            |
+| `success`              | `successMessage: string`                              | در صورت موفقیت یک عملیات پس‌زمینه‌ای (مانند ذخیره‌سازی مجدد) فراخوانی می‌شود.                             |
 | `messageRemoved`       | `undefined`                                           | اگر یک درخواست با خطا مواجه شود و پیام موقت دستیار نیاز به حذف داشته باشد، فراخوانی می‌شود.              |
 | `chatListUpdated`      | `{ chats, activeChatId }`                             | زمانی که لیست چت‌ها تغییر می‌کند (ایجاد، حذف، تغییر نام)، فراخوانی می‌شود.                                  |
 | `activeChatSwitched`   | `activeChat: object`                                  | هنگامی که کاربر یک چت دیگر را به عنوان چت فعال انتخاب می‌کند، فراخوانی می‌شود.                            |
@@ -48,12 +48,12 @@ const chatEngine = new ChatEngine({
 ```javascript
 // Re-render chat list whenever it changes
 chatEngine.on('chatListUpdated', ({ chats, activeChatId }) => {
-    renderSidebar(chats, activeChatId);
+    sidebarManager.render(chats, activeChatId);
 });
 
 // Load a new chat's history when switched
 chatEngine.on('activeChatSwitched', (activeChat) => {
-    renderMessages(activeChat.messages);
+    messageRenderer.renderHistory(activeChat.messages);
 });
 ```
 
@@ -86,30 +86,13 @@ chatEngine.sendMessage('این عکس را ببین', imageObject);
 برای بهبود خوانایی و قابلیت نگهداری کد، پروژه از JSDoc برای تعریف تایپ‌های اصلی داده استفاده می‌کند. این تایپ‌ها در فایل `js/types.js` تعریف شده‌اند و به IDE شما برای ارائه راهنمایی بهتر کمک می‌کنند.
 
 -   **`Message`**: نماینده یک پیام در گفتگو.
-    -   `id: string`
-    -   `role: 'user' | 'model'`
-    -   `content: string`
-    -   `timestamp: number`
-    -   `image?: ImageData` (اختیاری)
-
 -   **`ImageData`**: نماینده یک تصویر پیوست شده.
-    -   `data: string` (رشته Base64)
-    -   `mimeType: string`
-
 -   **`Chat`**: نماینده یک گفتگوی کامل.
-    -   `id: string`
-    -   `title: string`
-    -   `messages: Array<Message>`
-    -   `createdAt: number`
-    -   `updatedAt: number`
-    -   `provider: string`
-    -   `modelName: string`
-
 -   **`Settings`**: نماینده تنظیمات کاربر.
-    -   `provider: 'gemini' | 'openai' | 'custom'`
-    -   `modelName: string`
-    -   `apiKey: string`
-    -   `endpointUrl?: string` (اختیاری)
+-   **`StorageAdapter`**: رابط (Interface) برای ماژول‌های ذخیره‌سازی.
+-   **`ProviderHandler`**: رابط (Interface) برای ماژول‌های ارائه‌دهنده API.
+
+برای مشاهده جزئیات کامل هر تایپ، به فایل `js/types.js` مراجعه کنید.
 
 ## بخش ۳: راهنمای توسعه
 
@@ -117,22 +100,18 @@ chatEngine.sendMessage('این عکس را ببین', imageObject);
 
 ### چگونه منطق تصویر کار می‌کند؟
 
-جریان داده برای ارسال یک تصویر به شرح زیر است:
+جریان داده برای ارسال یک تصویر پس از بازسازی UI به شرح زیر است:
 
-1.  **انتخاب فایل (`ChatUI`)**: کاربر روی دکمه پیوست کلیک می‌کند و `handleFileSelect` فراخوانی می‌شود.
-2.  **اعتبارسنجی و خواندن (`ChatUI`)**: فایل از نظر نوع و حجم اعتبارسنجی می‌شود. سپس با استفاده از `FileReader` به صورت `Data URL` خوانده می‌شود.
-3.  **فشرده‌سازی (`ChatUI`)**: اگر حجم فایل از ۲ مگابایت بیشتر باشد (و GIF نباشد)، متد `compressImage` فراخوانی می‌شود.
-4.  **ذخیره در وضعیت UI (`ChatUI`)**: آبجکت تصویر (`{ data: base64, mimeType: '...' }`) در `this.attachedImage` ذخیره شده و `renderPreview` برای نمایش پیش‌نمایش فراخوانی می‌شود.
-5.  **ارسال به موتور (`ChatUI` -> `ChatEngine`)**: هنگام ارسال، `handleSendMessage` آبجکت تصویر را به متد `chatEngine.sendMessage` پاس می‌دهد.
-6.  **افزودن به تاریخچه (`ChatEngine`)**: `ChatEngine` یک آبجکت پیام جدید با پراپرتی `image` ایجاد کرده و آن را به تاریخچه چت فعال اضافه می‌کند، سپس رویداد `message` را برای UI منتشر می‌کند.
-7.  **ارسال به Provider (`ChatEngine` -> `Provider`)**: تاریخچه پیام‌ها به `Provider` مربوطه ارسال می‌شود.
-8.  **ساخت بدنه درخواست (`Provider`)**: هر `Provider` مسئول تبدیل آبجکت تصویر به فرمت مورد نیاز API خود است.
+1.  **راه‌اندازی (`InputManager`)**: کاربر روی دکمه پیوست کلیک می‌کند. `InputManager` این رویداد را گرفته و متد `fileManager.trigger()` را فراخوانی می‌کند.
+2.  **انتخاب فایل (`FileManager`)**: `FileManager` پنجره انتخاب فایل را باز می‌کند. پس از انتخاب، فایل را اعتبارسنجی کرده، می‌خواند و در صورت نیاز فشرده‌سازی می‌کند.
+3.  **ارسال داده به InputManager (`FileManager`)**: پس از پردازش موفقیت‌آمیز، `FileManager` یک `callback` را با آبجکت `ImageData` فراخوانی می‌کند که در `constructor` از `ChatUI` دریافت کرده است.
+4.  **نمایش پیش‌نمایش (`InputManager`)**: این `callback` به متد `inputManager.setAndPreviewImage` متصل است. این متد آبجکت تصویر را در وضعیت داخلی خود ذخیره کرده و پیش‌نمایش را در UI رندر می‌کند.
+5.  **ارسال نهایی (`InputManager` -> `ChatUI` -> `ChatEngine`)**: وقتی کاربر دکمه ارسال را می‌زند، `InputManager` با متن و آبجکت تصویر، `callback` مربوط به `onSendMessage` را فراخوانی می‌کند. این `callback` به متد `chatUI.handleSendMessage` متصل است که در نهایت `chatEngine.sendMessage` را فراخوانی می‌کند.
+6.  **پردازش در هسته (`ChatEngine` -> `MessageHandler`)**: `ChatEngine` وظیفه را به `MessageHandler` واگذار می‌کند، که پیام را ساخته و فرآیند ارتباط با API را آغاز می‌کند.
 
 ### چگونه یک ارائه‌دهنده (Provider) جدید اضافه کنیم؟
 
-به لطف معماری ماژولار، افزودن پشتیبانی از یک API جدید (مانند Anthropic Claude) نیازی به تغییر در هسته `ChatEngine` ندارد. شما باید یک **"آداپتور ارائه‌دهنده"** ایجاد کنید که یک ماژول جاوااسکریپت با یک تابع `export` شده است.
-
-این تابع مسئول تبدیل تاریخچه پیام به فرمت مورد نیاز API جدید و پردازش پاسخ استریم آن است.
+به لطف معماری ماژولار، افزودن پشتیبانی از یک API جدید (مانند Anthropic Claude) نیازی به تغییر در هسته `ChatEngine` ندارد. شما باید یک **"آداپتور ارائه‌دهنده"** ایجاد کنید.
 
 برای مشاهده جزئیات کامل API مورد نیاز، مراحل پیاده‌سازی و مثال‌های عملی، به **[راهنمای آداپتور ارائه‌دهنده (Provider Adapter Guide)](./providerAdaptorGuide.md)** مراجعه کنید.
 
@@ -145,7 +124,7 @@ chatEngine.sendMessage('این عکس را ببین', imageObject);
 
 ### چگونه مکانیزم ذخیره‌سازی را تغییر دهیم؟
 
-به لطف معماری جدید، تغییر مکانیزم ذخیره‌سازی بسیار آسان است. `ChatEngine` دیگر به `IndexedDB` وابسته نیست و هر آبجکتی که **رابط ذخیره‌سازی (Storage Interface)** را پیاده‌سازی کند، می‌پذیرد.
+`ChatEngine` هر آبجکتی که **رابط ذخیره‌سازی (Storage Interface)** را پیاده‌سازی کند، می‌پذیرد.
 
 **مراحل**:
 1.  یک ماژول جاوااسکریپت جدید ایجاد کنید (مثلاً `myCustomStorage.js`).
@@ -163,20 +142,17 @@ const chatEngine = new ChatEngine({ storage: MyCustomStorage });
 
 برای مشاهده جزئیات کامل API مورد نیاز و مثال‌های پیاده‌سازی، به **[راهنمای آداپتور ذخیره‌سازی (Storage Adaptor Guide)](./storageAdaptorGuide.md)** مراجعه کنید.
 
-### چگونه مفسر Markdown را تغییر دهیم؟
-
-تمام منطق پردازش Markdown در فایل `js/services/markdownService.js` قرار دارد. برای استفاده از یک مفسر دیگر، کافی است این فایل را ویرایش کرده و متد `render(markdownText)` را با پیاده‌سازی جدید جایگزین کنید.
-
 ## بخش ۴: بهترین شیوه‌ها (Best Practices)
 
 ### الگوهای طراحی استفاده شده
 
+-   **Orchestrator/Module**: در لایه‌های `Core` و `UI` برای تقسیم مسئولیت‌ها استفاده شده است.
 -   **Observer (Pub/Sub)**: از طریق `EventEmitter` پیاده‌سازی شده و ارتباط بین `Core` و `UI` را مدیریت می‌کند.
--   **Strategy**: در `chatEngine.js` برای انتخاب `Provider` در زمان اجرا استفاده می‌شود.
--   **Adapter**: الگوی آداپتور برای لایه ذخیره‌سازی و ارائه‌دهندگان استفاده شده تا `ChatEngine` بتواند با هر پیاده‌سازی دلخواهی کار کند.
--   **Dependency Injection**: آداپتور ذخیره‌سازی و ارائه‌دهندگان به `ChatEngine` تزریق می‌شوند که باعث جداسازی بیشتر کد می‌شود.
+-   **Strategy**: در `MessageHandler` برای انتخاب `Provider` در زمان اجرا استفاده می‌شود.
+-   **Adapter**: برای لایه ذخیره‌سازی و ارائه‌دهندگان استفاده شده است.
+-   **Dependency Injection**: آداپتور ذخیره‌سازی و ارائه‌دهندگان به `ChatEngine` تزریق می‌شوند.
 
 ### نکات امنیتی
 
--   **محافظت از کلید API**: این یک برنامه کاملاً سمت کاربر (Client-Side) است. **کلیدهای API در `IndexedDB` (یا هر مکانیزم ذخیره‌سازی دیگر در مرورگر) ذخیره می‌شوند که اگرچه از `localStorage` امن‌تر است، اما همچنان در دسترس کاربر در مرورگر قرار دارد.** برای یک محیط پروداکشن واقعی، شما باید یک سرور واسط (Backend Proxy) ایجاد کنید که کلیدهای API را به صورت امن نگهداری کند.
--   **جلوگیری از XSS**: کتابخانه `markdown-it` برای لینک‌ها و محتوای Markdown استفاده می‌شود. تنظیمات فعلی `html: false` است که از تزریق HTML توسط مدل جلوگیری می‌کند. همیشه به خروجی‌های کتابخانه‌های third-party با احتیاط نگاه کنید.
+-   **محافظت از کلید API**: این یک برنامه کاملاً سمت کاربر (Client-Side) است. **کلیدهای API در `IndexedDB` ذخیره می‌شوند که اگرچه از `localStorage` امن‌تر است، اما همچنان در دسترس کاربر در مرورگر قرار دارد.** برای یک محیط پروداکشن واقعی، شما باید یک سرور واسط (Backend Proxy) ایجاد کنید که کلیدهای API را به صورت امن نگهداری کند. قابلیت **"فقط برای این نشست"** یک لایه امنیتی اضافه برای کاربران فراهم می‌کند.
+-   **جلوگیری از XSS**: کتابخانه `markdown-it` برای رندر محتوای Markdown استفاده می‌شود. تنظیمات فعلی `html: false` است که از تزریق HTML توسط مدل جلوگیری می‌کند.
