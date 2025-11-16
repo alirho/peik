@@ -726,3 +726,21 @@ js/core/
 ├── chatEngine.js (150 خط - Orchestrator)
 ├── modules/
 ```
+
+### پرامپت ۶۴
+می‌خوام chatUI.js رو بازسازی کنی: استخراج مسئولیت‌های مختلف به Component‌های جداگانه
+
+1. بارگذاری فایل
+2. lightboxManager
+3. inputManager
+4. chatUI.js جدید:
+    - فقط orchestration
+    - init components
+    - bind events
+    - updateChatView()
+5. ساختار جدید:
+```
+js/ui/
+├── chatUI.js (150 خط - Orchestrator)
+├── components/
+```

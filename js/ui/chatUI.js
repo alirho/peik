@@ -2,7 +2,9 @@ import { loadTemplate } from './templateLoader.js';
 import MessageRenderer from './components/messageRenderer.js';
 import SettingsModal from './components/settingsModal.js';
 import SidebarManager from './components/sidebarManager.js';
-import { FILE_LIMITS, IMAGE_SETTINGS } from '../utils/constants.js';
+import InputManager from './components/inputManager.js';
+import FileManager from './components/fileManager.js';
+import LightboxManager from './components/lightboxManager.js';
 
 // JSDoc Type Imports
 /** @typedef {import('../types.js').Settings} Settings */
@@ -20,25 +22,20 @@ class ChatUI {
     constructor(chatEngine, rootElement) {
         this.engine = chatEngine;
         this.rootElement = rootElement;
+        
+        // Components will be initialized in init()
         this.messageRenderer = null;
         this.settingsModal = null;
         this.sidebarManager = null;
+        this.inputManager = null;
+        this.fileManager = null;
+        this.lightboxManager = null;
+        
         this.currentStreamingBubble = null;
-        /** @type {ImageData | null} */
-        this.attachedImage = null;
         
         this.dom = {
-            chatForm: null,
-            messageInput: null,
-            sendButton: null,
-            messageList: null,
-            newChatButton: null,
             mainTitle: null,
-            attachFileButton: null,
-            fileInput: null,
-            imagePreviewContainer: null,
-            lightbox: null,
-            lightboxImage: null,
+            newChatButton: null
         };
     }
 
@@ -68,41 +65,33 @@ class ChatUI {
     }
 
     cacheDOMElements() {
-        this.dom.chatForm = document.getElementById('chat-form');
-        this.dom.messageInput = document.getElementById('message-input');
-        this.dom.sendButton = document.getElementById('send-button');
-        this.dom.messageList = document.getElementById('message-list');
-        this.dom.newChatButton = document.getElementById('new-chat-button');
         this.dom.mainTitle = document.getElementById('main-title');
-        this.dom.attachFileButton = document.getElementById('attach-file-button');
-        this.dom.fileInput = document.getElementById('file-input');
-        this.dom.imagePreviewContainer = document.getElementById('image-preview-container');
-        this.dom.lightbox = document.getElementById('image-lightbox');
-        this.dom.lightboxImage = document.getElementById('lightbox-image');
+        this.dom.newChatButton = document.getElementById('new-chat-button');
     }
 
     initComponents() {
-        this.messageRenderer = new MessageRenderer(this.dom.messageList, this);
+        this.lightboxManager = new LightboxManager();
+        this.messageRenderer = new MessageRenderer(document.getElementById('message-list'), this.lightboxManager);
         this.settingsModal = new SettingsModal(this.engine);
         this.sidebarManager = new SidebarManager(this.engine);
+        
+        this.fileManager = new FileManager(this.engine, (imageData) => {
+            this.inputManager.setAndPreviewImage(imageData);
+        });
+
+        this.inputManager = new InputManager(this.fileManager, (userInput, image) => {
+            this.handleSendMessage(userInput, image);
+        });
     }
 
     /**
-     * بررسی می‌کند که آیا تنظیمات API برای اجرای برنامه معتبر هستند یا خیر.
-     * @param {Settings | null} settings - آبجکت تنظیمات از حافظه.
-     * @returns {boolean} - اگر تنظیمات معتبر باشند true، در غیر این صورت false.
+     * Checks if the API settings are valid for running the application.
+     * @param {Settings | null} settings - The settings object from storage.
+     * @returns {boolean} True if settings are valid, false otherwise.
      */
     isSettingsValid(settings) {
-        if (!settings || !settings.provider) {
-            return false;
-        }
-
-        // For custom provider, the endpoint URL is the minimum requirement.
-        if (settings.provider === 'custom') {
-            return !!settings.endpointUrl;
-        }
-        
-        // For standard providers (Gemini, OpenAI), an API key is required.
+        if (!settings || !settings.provider) return false;
+        if (settings.provider === 'custom') return !!settings.endpointUrl;
         return !!settings.apiKey;
     }
 
@@ -137,10 +126,10 @@ class ChatUI {
         
         this.engine.on('streamEnd', () => {
             this.currentStreamingBubble = null;
-            this.updateSendButtonState();
+            this.inputManager.updateSendButtonState(false);
         });
 
-        this.engine.on('loading', (isLoading) => this.updateSendButtonState(isLoading));
+        this.engine.on('loading', (isLoading) => this.inputManager.updateSendButtonState(isLoading));
         
         this.engine.on('settingsSaved', () => {
             this.settingsModal.show(false);
@@ -154,238 +143,36 @@ class ChatUI {
     }
 
     bindUIEvents() {
-        this.dom.chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.handleSendMessage();
-        });
-
-        this.dom.messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.handleSendMessage();
-            }
-        });
-        
         this.dom.newChatButton.addEventListener('click', () => this.engine.startNewChat());
-        
-        this.dom.attachFileButton.addEventListener('click', () => this.dom.fileInput.click());
-        this.dom.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
-        
-        this.dom.messageInput.addEventListener('input', () => {
-            const el = this.dom.messageInput;
-            el.style.height = 'auto';
-            el.style.height = `${el.scrollHeight}px`;
-        });
-
-        // Lightbox events
-        this.dom.lightbox.addEventListener('click', () => this.hideLightbox());
-        this.dom.lightboxImage.addEventListener('click', (e) => e.stopPropagation());
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !this.dom.lightbox.classList.contains('hidden')) {
-                this.hideLightbox();
-            }
-        });
     }
 
     /**
-     * یک تصویر را با تغییر اندازه (در صورت لزوم) و انکود مجدد، فشرده‌سازی می‌کند.
-     * @param {string} dataUrl - آدرس داده Base64 تصویر.
-     * @param {string} originalMimeType - نوع MIME تصویر اصلی.
-     * @param {function(ImageData | null): void} callback - تابعی که با نتیجه فشرده‌سازی یا null (در صورت خطا) فراخوانی می‌شود.
+     * Handles the logic of sending a message, called by the InputManager.
+     * @param {string} userInput - The text from the input field.
+     * @param {ImageData | null} image - The attached image data, if any.
      */
-    compressImage(dataUrl, originalMimeType, callback) {
-        const outputMimeType = originalMimeType === 'image/png' ? 'image/png' : 'image/jpeg';
-    
-        const img = new Image();
-        img.src = dataUrl;
-    
-        img.onload = () => {
-            let { width, height } = img;
-    
-            // Calculate new dimensions if either width or height is too large
-            if (width > IMAGE_SETTINGS.MAX_DIMENSION || height > IMAGE_SETTINGS.MAX_DIMENSION) {
-                if (width > height) {
-                    height = Math.round((height * IMAGE_SETTINGS.MAX_DIMENSION) / width);
-                    width = IMAGE_SETTINGS.MAX_DIMENSION;
-                } else {
-                    width = Math.round((width * IMAGE_SETTINGS.MAX_DIMENSION) / height);
-                    height = IMAGE_SETTINGS.MAX_DIMENSION;
-                }
-            }
-    
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // Always re-encode to apply compression
-            let compressedDataUrl;
-            if (outputMimeType === 'image/png') {
-                compressedDataUrl = canvas.toDataURL(outputMimeType);
-            } else {
-                // For JPEG and other types, re-encode with quality setting
-                compressedDataUrl = canvas.toDataURL('image/jpeg', IMAGE_SETTINGS.COMPRESSION_QUALITY);
-            }
-    
-            const base64Data = compressedDataUrl.split(',')[1];
-    
-            callback({ 
-                data: base64Data, 
-                mimeType: outputMimeType
-            });
-        };
-    
-        img.onerror = () => {
-            this.engine.emit('error', 'خطا در پردازش تصویر برای فشرده‌سازی.');
-            callback(null);
-        }
-    }
-
-    handleFileSelect(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-    
-        this.dom.fileInput.value = '';
-    
-        if (!file.type.startsWith('image/')) {
-            this.engine.emit('error', 'لطفاً فقط فایل‌های تصویری را انتخاب کنید.');
-            return;
-        }
-    
-        if (file.size > FILE_LIMITS.MAX_ORIGINAL_FILE_SIZE_MB * 1024 * 1024) {
-            this.engine.emit('error', `حجم فایل نباید بیشتر از ${FILE_LIMITS.MAX_ORIGINAL_FILE_SIZE_MB} مگابایت باشد.`);
-            return;
-        }
-    
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUrl = e.target.result;
-            const COMPRESSION_THRESHOLD_BYTES = FILE_LIMITS.COMPRESSION_THRESHOLD_MB * 1024 * 1024;
-    
-            // Skip compression for GIFs to preserve animation.
-            if (file.size > COMPRESSION_THRESHOLD_BYTES && file.type !== 'image/gif') {
-                this.compressImage(dataUrl, file.type, (compressedResult) => {
-                    if (!compressedResult) return; // Error handled in compressImage
-                    
-                    this.attachedImage = {
-                        data: compressedResult.data,
-                        mimeType: compressedResult.mimeType,
-                    };
-                    this.renderPreview();
-                });
-            } else {
-                this.attachedImage = {
-                    data: dataUrl.split(',')[1],
-                    mimeType: file.type,
-                };
-                this.renderPreview();
-            }
-        };
-        reader.onerror = () => {
-            this.engine.emit('error', 'خطایی در خواندن فایل رخ داد.');
-            this.clearPreview();
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    renderPreview() {
-        if (!this.attachedImage) {
-            this.dom.imagePreviewContainer.classList.add('hidden');
-            this.dom.imagePreviewContainer.innerHTML = '';
-            return;
-        }
-
-        this.dom.imagePreviewContainer.innerHTML = ''; // Clear previous content
-
-        const img = document.createElement('img');
-        img.src = `data:${this.attachedImage.mimeType};base64,${this.attachedImage.data}`;
-        img.alt = 'Preview';
-        img.className = 'preview-image';
-
-        img.onload = () => {
-            // Image loaded successfully, show the preview
-            const removeButton = document.createElement('button');
-            removeButton.className = 'preview-remove-button';
-            removeButton.title = 'حذف تصویر';
-            removeButton.textContent = '×';
-            removeButton.addEventListener('click', () => this.clearPreview());
-
-            this.dom.imagePreviewContainer.appendChild(img);
-            this.dom.imagePreviewContainer.appendChild(removeButton);
-            this.dom.imagePreviewContainer.classList.remove('hidden');
-        };
-
-        img.onerror = () => {
-            // Image failed to load
-            this.clearPreview();
-            this.engine.emit('error', 'خطا در نمایش پیش‌نمایش تصویر');
-        };
-    }
-
-    clearPreview() {
-        this.attachedImage = null;
-        this.dom.fileInput.value = ''; // Ensure file can be re-selected
-        this.renderPreview();
-    }
-    
-    handleSendMessage() {
+    handleSendMessage(userInput, image) {
         if (this.engine.isLoading) return;
-
-        const userInput = this.dom.messageInput.value.trim();
-        const image = this.attachedImage;
 
         if (userInput || image) {
             this.engine.sendMessage(userInput, image);
-            this.dom.messageInput.value = '';
-            this.dom.messageInput.style.height = 'auto';
-            this.dom.messageInput.focus();
-            this.clearPreview();
+            this.inputManager.reset();
         }
     }
 
+    /**
+     * Updates the main chat view with the content of a given chat.
+     * @param {import('../types.js').Chat} chat - The chat object to display.
+     */
     updateChatView(chat) {
         if (!chat) return;
-        this.clearPreview();
+        this.inputManager.clearPreview();
         this.dom.mainTitle.textContent = chat.title;
         if (chat.messages.length > 0) {
             this.messageRenderer.renderHistory(chat.messages);
         } else {
             this.messageRenderer.showWelcomeMessage();
         }
-    }
-    
-    updateSendButtonState(isLoading = this.engine.isLoading) {
-        const button = this.dom.sendButton;
-        const attachButton = this.dom.attachFileButton;
-        if (isLoading) {
-            button.disabled = true;
-            attachButton.disabled = true;
-            button.innerHTML = '<div class="spinner"></div>';
-        } else {
-            button.disabled = false;
-            attachButton.disabled = false;
-            button.innerHTML = '<span class="material-symbols-outlined">send</span>';
-        }
-    }
-
-    // --- Lightbox Methods ---
-    /**
-     * مودال نمایش تمام‌صفحه تصویر (Lightbox) را نمایش می‌دهد.
-     * @param {string} src - آدرس منبع (src) تصویر برای نمایش.
-     */
-    showLightbox(src) {
-        this.dom.lightboxImage.src = src;
-        this.dom.lightbox.classList.remove('hidden');
-    }
-
-    /**
-     * مودال نمایش تمام‌صفحه تصویر (Lightbox) را مخفی می‌کند.
-     */
-    hideLightbox() {
-        this.dom.lightbox.classList.add('hidden');
-        this.dom.lightboxImage.src = ''; // Clear src to stop loading if in progress
     }
 }
 

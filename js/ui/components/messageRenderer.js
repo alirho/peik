@@ -3,7 +3,7 @@ import { UI_TIMEOUTS } from '../../utils/constants.js';
 
 // JSDoc Type Imports
 /** @typedef {import('../../types.js').Message} Message */
-/** @typedef {import('../chatUI.js').default} ChatUI */
+/** @typedef {import('./lightboxManager.js').default} LightboxManager */
 
 /**
  * رندر کردن پیام‌ها، نشانگر تایپ و خطاها را در UI چت مدیریت می‌کند.
@@ -11,11 +11,11 @@ import { UI_TIMEOUTS } from '../../utils/constants.js';
 class MessageRenderer {
     /**
      * @param {HTMLElement} messageListContainer - المان DOM که پیام‌ها در آن نمایش داده می‌شوند.
-     * @param {ChatUI} chatUI - نمونه اصلی کنترل‌کننده UI.
+     * @param {LightboxManager} lightboxManager - The lightbox manager instance.
      */
-    constructor(messageListContainer, chatUI) {
+    constructor(messageListContainer, lightboxManager) {
         this.container = messageListContainer;
-        this.chatUI = chatUI;
+        this.lightboxManager = lightboxManager;
     }
 
     /**
@@ -76,8 +76,8 @@ class MessageRenderer {
                 };
 
                 img.addEventListener('click', () => {
-                    if (this.chatUI) {
-                        this.chatUI.showLightbox(img.src);
+                    if (this.lightboxManager) {
+                        this.lightboxManager.show(img.src);
                     }
                 });
                 
