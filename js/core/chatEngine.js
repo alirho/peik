@@ -94,27 +94,28 @@ class ChatEngine extends EventEmitter {
      */
     mergeLimits(customLimits) {
         const limitsConfig = customLimits || 'web';
-        let baseLimits = JSON.parse(JSON.stringify(DEFAULT_LIMITS)); // Deep copy
+        
+        // Start with a shallow copy of defaults.
+        let mergedLimits = { ...DEFAULT_LIMITS };
 
         if (typeof limitsConfig === 'string' && PRESET_LIMITS[limitsConfig]) {
             const preset = PRESET_LIMITS[limitsConfig];
-            baseLimits = {
-                ...baseLimits,
-                ...preset,
-                file: { ...baseLimits.file, ...(preset.file || {}) },
-                image: { ...baseLimits.image, ...(preset.image || {}) },
-            };
-        } else if (typeof limitsConfig === 'object') {
-            const custom = customLimits;
-            baseLimits = {
-                ...baseLimits,
-                ...custom,
-                file: { ...baseLimits.file, ...(custom.file || {}) },
-                image: { ...baseLimits.image, ...(custom.image || {}) },
-            };
+            // Merge preset properties over defaults.
+            mergedLimits = { ...mergedLimits, ...preset };
+            // Manually deep-merge nested objects.
+            mergedLimits.file = { ...DEFAULT_LIMITS.file, ...(preset.file || {}) };
+            mergedLimits.image = { ...DEFAULT_LIMITS.image, ...(preset.image || {}) };
+
+        } else if (typeof limitsConfig === 'object' && limitsConfig !== null) {
+            const custom = limitsConfig;
+            // Merge custom properties over defaults.
+            mergedLimits = { ...mergedLimits, ...custom };
+            // Manually deep-merge nested objects.
+            mergedLimits.file = { ...DEFAULT_LIMITS.file, ...(custom.file || {}) };
+            mergedLimits.image = { ...DEFAULT_LIMITS.image, ...(custom.image || {}) };
         }
         
-        return baseLimits;
+        return mergedLimits;
     }
 
     /**
@@ -133,25 +134,47 @@ class ChatEngine extends EventEmitter {
     async init() {
         try {
             this.settings = await this.storage.loadSettings();
-            this.chats = await this.storage.loadAllChats();
+            let loadedChats = await this.storage.loadAllChats();
             
+            // Add a data validation layer to prevent crashes from corrupted storage
+            this.chats = loadedChats.filter(chat => 
+                chat && typeof chat.id === 'string' && typeof chat.updatedAt === 'number'
+            );
+            
+            let activeChat;
             if (this.chats.length === 0) {
-                // Creates a new chat in memory, will be saved on first message
-                await this.chatManager.startNewChat(false);
+                // Create the initial chat directly here to ensure state is set correctly.
+                // This chat is only in memory and will be saved on the first message.
+                const now = Date.now();
+                const newChat = {
+                    id: `chat_${now}`,
+                    title: 'گپ جدید',
+                    messages: [],
+                    createdAt: now,
+                    updatedAt: now,
+                    provider: this.settings?.provider || 'unknown',
+                    modelName: this.settings?.modelName || 'unknown'
+                };
+                this.chats.push(newChat);
+                this.activeChatId = newChat.id;
+                activeChat = newChat;
             } else {
-                const lastActive = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
-                this.activeChatId = lastActive.id;
+                // If chats exist, set the most recently updated one as active.
+                activeChat = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
+                this.activeChatId = activeChat.id;
             }
 
-            this.emit('init', {
+            const initPayload = {
                 settings: this.settings,
                 chats: this.chats,
-                activeChat: this.chatManager.getActiveChat(),
-            });
+                activeChat: activeChat,
+            };
+            this.emit('init', initPayload);
             
             this.syncManager.setup();
 
         } catch (error) {
+            console.error('Error during ChatEngine init():', error);
             this.emit('error', error.message || 'خطا در بارگذاری تاریخچه گفتگوها.');
         }
     }
@@ -188,7 +211,7 @@ class ChatEngine extends EventEmitter {
     /**
      * یک گپ جدید ایجاد کرده و آن را به عنوان گپ فعال تنظیم می‌کند.
      * @param {boolean} [emitUpdate=true] - اگر true باشد، رویدادها برای UI منتشر می‌شوند.
-     * @returns {Promise<void>}
+     * @returns {Promise<Chat>}
      */
     startNewChat(emitUpdate = true) {
         return this.chatManager.startNewChat(emitUpdate);

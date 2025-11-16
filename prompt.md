@@ -888,3 +888,55 @@ Error in listener for event "init": TypeError: can't access property "id", activ
     async* http://localhost:3000/js/main.js:39
     async* http://localhost:3000/js/main.js:17
 ```
+
+### پرامپت ۷۳
+زمانی که یک پیام را در بخش ورودی متن می‌نویسم و اون را ارسال می‌کنم، پیام پاک از ورودی پاک می‌شه، اما در صفحه گپ نمایش داده نمی‌شه و هیچ پیامی هم از مدل هوش داده نمی‌شه.
+
+### پرامپت ۷۴
+مشکل حل نشد.
+
+### پرامپت ۷۵
+هنوز مشکل وجود داره، بیا برای این که مشکل را زودتر پیدا کنیم، در جاهایی که احتنال خطای میدی لاگ بزار تا من بهت بگم کجا خطا وجود داره.
+
+### پرامپت ۷۶
+این لاگ‌ها نمایش داده می‌شه:
+
+```js
+[DEBUG InputManager] submit() called. inputManager.js:59:17
+[DEBUG InputManager] User input: 
+Object { userInput: "سلام", hasImage: false }
+inputManager.js:68:17
+[DEBUG InputManager] Calling onSendMessage... inputManager.js:86:17
+[DEBUG ChatUI] handleSendMessage called with: 
+Object { userInput: "سلام", hasImage: false }
+chatUI.js:169:17
+[DEBUG ChatUI] Calling engine.sendMessage... chatUI.js:176:21
+[DEBUG Engine] sendMessage() called. chatEngine.js:258:17
+[DEBUG MsgHandler] sendMessage called. messageHandler.js:34:17
+[DEBUG MsgHandler] Blocked: isLoading or no activeChatId. 
+Object { isLoading: false, activeChatId: null }
+messageHandler.js:36:21
+Submission safety timeout triggered. Resetting UI state.
+```
+
+### پرامپت ۷۷
+در صفحه گپ خطای «حداکثر null پیام در هر گپ مجاز است.» نمایش داده می‌شه و در کنسول هم خطاهای زیر نمایش داده می‌شه:
+
+```js
+[DEBUG ChatUI] Received "init" event: 
+Object { settings: {…}, chats: (1) […], activeChat: {…} }
+chatUI.js:100:21
+[DEBUG InputManager] submit() called. inputManager.js:59:17
+[DEBUG InputManager] User input: 
+Object { userInput: "سلام خوبی؟", hasImage: false }
+inputManager.js:68:17
+[DEBUG InputManager] Calling onSendMessage... inputManager.js:86:17
+[DEBUG ChatUI] handleSendMessage called with: 
+Object { userInput: "سلام خوبی؟", hasImage: false }
+chatUI.js:169:17
+[DEBUG ChatUI] Calling engine.sendMessage... chatUI.js:176:21
+[DEBUG MsgHandler] sendMessage called. messageHandler.js:34:17
+[DEBUG MsgHandler] Settings and provider are valid. messageHandler.js:54:17
+[DEBUG MsgHandler] Found active chat: 
+Object { id: "chat_1763299283560", title: "گپ جدید", messages: [], createdAt: 1763299283560, updatedAt: 1763299283560, provider: "custom", modelName: "gpt-oss-120b" }
+```
