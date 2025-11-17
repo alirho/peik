@@ -1,0 +1,29 @@
+{
+  "defaultProvider": {
+    "provider": "gemini",
+    "modelName": "gemini-2.5-flash",
+    "apiKey": "YOUR_GEMINI_API_KEY_HERE",
+    "endpointUrl": ""
+  }
+}
+
+/**
+مثال‌های دیگر:
+{
+  "defaultProvider": {
+    "provider": "openai",
+    "modelName": "gpt-4",
+    "apiKey": "YOUR_OPENAI_API_KEY_HERE",
+    "endpointUrl": ""
+  }
+}
+
+{
+  "defaultProvider": {
+    "provider": "custom",
+    "modelName": "llama3",
+    "apiKey": "ollama",
+    "endpointUrl": "http://localhost:11434/v1/chat/completions"
+  }
+}
+**/
