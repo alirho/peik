@@ -1,6 +1,6 @@
 # گوگ (گپ و گفت)
 
-![گوگ](https://img.shields.io/badge/Goug-v0.5.1-blue)
+![گوگ](https://img.shields.io/badge/Goug-v0.6.0-blue)
 ![زبان](https://img.shields.io/badge/Language-Persian-green)
 ![مجوز](https://img.shields.io/badge/License-MIT-yellow)
 
