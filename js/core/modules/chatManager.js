@@ -1,9 +1,9 @@
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').Chat} Chat */
 /** @typedef {import('../chatEngine.js').default} ChatEngine */
 
 /**
- * تمام عملیات مربوط به مدیریت چت‌ها (ایجاد، حذف، تغییر نام، جابجایی) را مدیریت می‌کند.
+ * تمام عملیات مربوط به مدیریت گپ‌ها (ایجاد، حذف، تغییر نام، جابجایی) را مدیریت می‌کند.
  */
 class ChatManager {
     /**
@@ -20,7 +20,7 @@ class ChatManager {
      * @returns {Promise<Chat>}
      */
     async startNewChat(emitUpdate = true) {
-        // Cancel any ongoing stream before starting a new chat
+        // لغو هرگونه استریم در حال اجرا قبل از شروع یک گپ جدید
         this.engine.messageHandler.cancelCurrentStream();
 
         const { maxChats } = this.engine.limits;
@@ -33,7 +33,7 @@ class ChatManager {
         const newChat = {
             id: `chat_${now}`,
             title: 'گپ جدید',
-            messages: [],
+            messages: [], // گپ جدید با پیام‌های خالی شروع می‌شود (از قبل بارگذاری شده).
             createdAt: now,
             updatedAt: now,
             provider: this.engine.settings?.provider || 'unknown',
@@ -53,23 +53,49 @@ class ChatManager {
     
     /**
      * گپ فعال فعلی را به گپ دیگری با شناسه مشخص تغییر می‌دهد.
+     * در صورت لزوم، پیام‌های گپ مقصد را به صورت درخواستی بارگذاری می‌کند.
      * @param {string} chatId - شناسه گپ مورد نظر.
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    switchActiveChat(chatId) {
-        if (chatId === this.engine.activeChatId) return;
+    async switchActiveChat(chatId) {
+        if (chatId === this.engine.activeChatId && this.getActiveChat()?.messages) {
+            return; // اگر گپ از قبل فعال و بارگذاری شده است، کاری انجام نده.
+        }
 
-        // Cancel any ongoing stream from the old chat before switching
+        // لغو هرگونه استریم در حال اجرا از گپ قبلی قبل از جابجایی
         this.engine.messageHandler.cancelCurrentStream();
         
-        const chatToActivate = this.engine.chats.find(c => c.id === chatId);
-        if (chatToActivate) {
-            this.engine.activeChatId = chatId;
-            this.engine.emit('activeChatSwitched', chatToActivate);
-            this.engine.emit('chatListUpdated', { chats: this.engine.chats, activeChatId: this.engine.activeChatId });
-        } else {
-             console.warn(`Chat with ID ${chatId} not found for switching.`);
+        const chatIndex = this.engine.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) {
+            console.warn(`گپ با شناسه ${chatId} برای جابجایی یافت نشد.`);
+            return;
         }
+
+        let chatToActivate = this.engine.chats[chatIndex];
+        this.engine.activeChatId = chatId;
+        
+        // اگر پیام‌ها هنوز بارگذاری نشده‌اند، آنها را از حافظه دریافت کن
+        if (!chatToActivate.messages) {
+            this.engine.setLoading(true);
+            try {
+                const fullChat = await this.engine.storage.loadChatById(chatId);
+                if (fullChat) {
+                    this.engine.chats[chatIndex] = fullChat; // جایگزینی گپ ناقص با گپ کامل
+                    chatToActivate = fullChat;
+                } else {
+                    throw new Error(`گپ ${chatId} در حافظه یافت نشد.`);
+                }
+            } catch (error) {
+                console.error("خطا در بارگذاری پیام‌های گپ:", error);
+                this.engine.emit('error', 'خطا در بارگذاری تاریخچه گپ.');
+                return;
+            } finally {
+                this.engine.setLoading(false);
+            }
+        }
+        
+        this.engine.emit('activeChatSwitched', chatToActivate);
+        this.engine.emit('chatListUpdated', { chats: this.engine.chats, activeChatId: this.engine.activeChatId });
     }
 
     /**
@@ -113,7 +139,7 @@ class ChatManager {
      * @returns {Promise<void>}
      */
     async deleteChat(chatId) {
-        // If the chat to be deleted is the active one, cancel its stream first.
+        // اگر گپی که قرار است حذف شود، گپ فعال است، ابتدا استریم آن را لغو کن.
         if (this.engine.activeChatId === chatId) {
             this.engine.messageHandler.cancelCurrentStream();
         }
@@ -126,7 +152,7 @@ class ChatManager {
             if (this.engine.activeChatId === chatId) {
                 if (this.engine.chats.length > 0) {
                     const newActiveChat = this.engine.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
-                    this.switchActiveChat(newActiveChat.id);
+                    await this.switchActiveChat(newActiveChat.id);
                 } else {
                     await this.startNewChat();
                 }

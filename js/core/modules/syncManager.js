@@ -1,6 +1,6 @@
 import { SYNC_CONFIG } from '../../utils/constants.js';
 
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../chatEngine.js').default} ChatEngine */
 
 /**
@@ -30,7 +30,7 @@ class SyncManager {
                     }
                 };
             } catch (e) {
-                console.error("BroadcastChannel could not be created:", e);
+                console.error("امکان ایجاد BroadcastChannel وجود ندارد:", e);
                 this.syncChannel = null;
             }
         }
@@ -50,23 +50,35 @@ class SyncManager {
      */
     async handleSyncUpdate() {
         try {
-            this.engine.chats = await this.engine.storage.loadAllChats();
+            // به دلیل معماری جدید، فقط لیست گپ‌ها را دوباره بارگذاری می‌کنیم.
+            // پیام‌های گپ فعال در صورت نیاز توسط chatManager بارگذاری خواهد شد.
+            const chatList = await this.engine.storage.loadChatList();
+            this.engine.chats = chatList;
+
             const activeChatExists = this.engine.chats.some(c => c.id === this.engine.activeChatId);
+            const currentActiveChat = this.engine.getActiveChat();
 
             if (!activeChatExists) {
+                // اگر گپ فعال فعلی حذف شده باشد
                 if (this.engine.chats.length > 0) {
                     const newActiveChat = this.engine.chats.sort((a, b) => b.updatedAt - a.updatedAt)[0];
-                    this.engine.activeChatId = newActiveChat.id;
+                    await this.engine.chatManager.switchActiveChat(newActiveChat.id);
                 } else {
-                    // All chats were deleted from another tab
+                    // اگر تمام گپ‌ها از تب دیگر حذف شده باشند
                     await this.engine.chatManager.startNewChat();
-                    return; // startNewChat handles its own emissions
+                }
+            } else if (currentActiveChat && !currentActiveChat.messages) {
+                // اگر گپ فعال وجود دارد اما پیام‌هایش بارگذاری نشده (مثلاً در یک تب جدید باز شده)
+                // switchActiveChat آن را بارگذاری خواهد کرد.
+                await this.engine.chatManager.switchActiveChat(this.engine.activeChatId);
+            } else {
+                // به‌روزرسانی لیست گپ‌ها و نمایشگر گپ فعلی
+                this.engine.emit('chatListUpdated', { chats: this.engine.chats, activeChatId: this.engine.activeChatId });
+                // اگر گپ فعال پیام‌هایش را دارد، آن را دوباره منتشر کن تا UI به‌روز شود (مثلاً عنوان)
+                if (currentActiveChat?.messages) {
+                    this.engine.emit('activeChatSwitched', currentActiveChat);
                 }
             }
-
-            this.engine.emit('chatListUpdated', { chats: this.engine.chats, activeChatId: this.engine.activeChatId });
-            this.engine.emit('activeChatSwitched', this.engine.getActiveChat());
-
         } catch (error) {
             this.engine.emit('error', error.message || 'خطا در همگام‌سازی با تب‌های دیگر.');
         }

@@ -5,7 +5,7 @@ import StorageManager from './modules/storageManager.js';
 import SyncManager from './modules/syncManager.js';
 import { DEFAULT_LIMITS, PRESET_LIMITS } from '../utils/constants.js';
 
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../types.js').Settings} Settings */
 /** @typedef {import('../types.js').Chat} Chat */
 /** @typedef {import('../types.js').ImageData} ImageData */
@@ -13,18 +13,27 @@ import { DEFAULT_LIMITS, PRESET_LIMITS } from '../utils/constants.js';
 /** @typedef {import('../types.js').ProviderHandler} ProviderHandler */
 
 /**
- * Creates a simple in-memory storage adapter that conforms to the StorageAdapter interface.
- * This is used as a fallback when no persistent storage is provided to the ChatEngine.
+ * یک آداپتور ذخیره‌سازی ساده در حافظه ایجاد می‌کند که با رابط StorageAdapter سازگار است.
+ * این به عنوان یک جایگزین در صورتی که هیچ ذخیره‌سازی پایداری به ChatEngine ارائه نشود، استفاده می‌شود.
  * @returns {StorageAdapter}
  */
 const createInMemoryStorage = () => {
     let settings = null;
     const chats = new Map();
 
+    // برای سادگی، این پیاده‌سازی از بارگذاری درخواستی پشتیبانی نمی‌کند و همیشه گپ کامل را برمی‌گرداند.
     return {
         async loadSettings() { return settings; },
         async saveSettings(newSettings) { settings = newSettings; },
-        async loadAllChats() { return Array.from(chats.values()); },
+        async loadChatList() { 
+            // در حالت حافظه موقت، پیام‌ها همیشه در دسترس هستند، اما برای سازگاری API آنها را حذف می‌کنیم.
+            const chatList = Array.from(chats.values()).map(chat => {
+                const { messages, ...chatWithoutMessages } = chat;
+                return chatWithoutMessages;
+            });
+            return chatList;
+        },
+        async loadChatById(chatId) { return chats.get(chatId) || null; },
         async saveChat(chat) { chats.set(chat.id, JSON.parse(JSON.stringify(chat))); },
         async deleteChatById(chatId) { chats.delete(chatId); }
     };
@@ -37,15 +46,15 @@ const createInMemoryStorage = () => {
  */
 class ChatEngine extends EventEmitter {
     /**
-     * @param {object} [options] - Configuration options.
+     * @param {object} [options] - گزینه‌های پیکربندی.
      * @param {StorageAdapter} [options.storage] - یک آداپتور ذخیره‌سازی که رابط StorageAdapter را پیاده‌سازی می‌کند.
      * @param {Object.<string, ProviderHandler>} [options.providers] - یک map از نام ارائه‌دهندگان به توابع مدیریت‌کننده آن‌ها.
      * @param {string | object} [options.limits] - نام یک پیش‌تنظیم ('web', 'ide', 'mobile', 'unlimited') یا یک آبجکت محدودیت سفارشی.
      */
     constructor(options = {}) {
         super();
-        // --- Core State ---
-        /** @type {Array<Chat>} */
+        // --- وضعیت اصلی ---
+        /** @type {Array<Chat>} - لیستی از گپ‌ها (ممکن است شامل پیام‌ها نباشد) */
         this.chats = [];
         /** @type {string | null} */
         this.activeChatId = null;
@@ -61,20 +70,20 @@ class ChatEngine extends EventEmitter {
             this.storage = createInMemoryStorage();
             console.warn(`
 /******************************************************************\\
-* GOUG WARNING: No storage adapter provided.                     *
-* The application will run in-memory mode.                       *
-* All chats and settings will be lost on page refresh.           *
+* هشدار GOUG: هیچ آداپتور ذخیره‌سازی ارائه نشده است.              *
+* برنامه در حالت حافظه موقت (in-memory) اجرا خواهد شد.           *
+* تمام گپ‌ها و تنظیمات پس از رفرش صفحه از بین خواهند رفت.       *
 *                                                                *
-* To persist data, provide a storage adapter during              *
-* ChatEngine initialization.                                     *
-* See: docs/storageAdaptorGuide.md                               *
+* برای ذخیره پایدار داده‌ها، یک آداپتور ذخیره‌سازی در هنگام      *
+* راه‌اندازی ChatEngine ارائه دهید.                              *
+* مشاهده مستندات: docs/storageAdaptorGuide.md                   *
 \\******************************************************************/
             `);
         }
         /** @type {Map<string, ProviderHandler>} */
         this.providers = new Map();
         
-        // --- Modules ---
+        // --- ماژول‌ها ---
         this.chatManager = new ChatManager(this);
         this.messageHandler = new MessageHandler(this);
         this.storageManager = new StorageManager(this);
@@ -95,22 +104,17 @@ class ChatEngine extends EventEmitter {
     mergeLimits(customLimits) {
         const limitsConfig = customLimits || 'web';
         
-        // Start with a shallow copy of defaults.
         let mergedLimits = { ...DEFAULT_LIMITS };
 
         if (typeof limitsConfig === 'string' && PRESET_LIMITS[limitsConfig]) {
             const preset = PRESET_LIMITS[limitsConfig];
-            // Merge preset properties over defaults.
             mergedLimits = { ...mergedLimits, ...preset };
-            // Manually deep-merge nested objects.
             mergedLimits.file = { ...DEFAULT_LIMITS.file, ...(preset.file || {}) };
             mergedLimits.image = { ...DEFAULT_LIMITS.image, ...(preset.image || {}) };
 
         } else if (typeof limitsConfig === 'object' && limitsConfig !== null) {
             const custom = limitsConfig;
-            // Merge custom properties over defaults.
             mergedLimits = { ...mergedLimits, ...custom };
-            // Manually deep-merge nested objects.
             mergedLimits.file = { ...DEFAULT_LIMITS.file, ...(custom.file || {}) };
             mergedLimits.image = { ...DEFAULT_LIMITS.image, ...(custom.image || {}) };
         }
@@ -134,34 +138,31 @@ class ChatEngine extends EventEmitter {
     async init() {
         try {
             this.settings = await this.storage.loadSettings();
-            let loadedChats = await this.storage.loadAllChats();
+            let loadedChatList = await this.storage.loadChatList();
             
-            // Add a data validation layer to prevent crashes from corrupted storage
-            this.chats = loadedChats.filter(chat => 
+            this.chats = loadedChatList.filter(chat => 
                 chat && typeof chat.id === 'string' && typeof chat.updatedAt === 'number'
             );
             
             let activeChat;
             if (this.chats.length === 0) {
-                // Create the initial chat directly here to ensure state is set correctly.
-                // This chat is only in memory and will be saved on the first message.
-                const now = Date.now();
-                const newChat = {
-                    id: `chat_${now}`,
-                    title: 'گپ جدید',
-                    messages: [],
-                    createdAt: now,
-                    updatedAt: now,
-                    provider: this.settings?.provider || 'unknown',
-                    modelName: this.settings?.modelName || 'unknown'
-                };
-                this.chats.push(newChat);
-                this.activeChatId = newChat.id;
-                activeChat = newChat;
+                activeChat = await this.chatManager.startNewChat(false); // ایجاد گپ اولیه بدون انتشار رویداد
             } else {
-                // If chats exist, set the most recently updated one as active.
-                activeChat = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
-                this.activeChatId = activeChat.id;
+                // فعال کردن گپی که اخیراً به‌روزرسانی شده
+                const latestChatStub = this.chats.sort((a,b) => b.updatedAt - a.updatedAt)[0];
+                this.activeChatId = latestChatStub.id;
+
+                // بارگذاری پیام‌های گپ فعال برای نمایش اولیه
+                const fullActiveChat = await this.storage.loadChatById(this.activeChatId);
+                if (fullActiveChat) {
+                    const index = this.chats.findIndex(c => c.id === this.activeChatId);
+                    if (index !== -1) this.chats[index] = fullActiveChat;
+                    activeChat = fullActiveChat;
+                } else {
+                    // اگر گپ فعال یافت نشد (مثلاً به دلیل خرابی داده)، یک گپ جدید ایجاد کن
+                    console.error(`گپ فعال با شناسه ${this.activeChatId} یافت نشد. یک گپ جدید ایجاد می‌شود.`);
+                    activeChat = await this.chatManager.startNewChat(false);
+                }
             }
 
             const initPayload = {
@@ -174,8 +175,10 @@ class ChatEngine extends EventEmitter {
             this.syncManager.setup();
 
         } catch (error) {
-            console.error('Error during ChatEngine init():', error);
+            console.error('خطا در هنگام راه‌اندازی ChatEngine:', error);
             this.emit('error', error.message || 'خطا در بارگذاری تاریخچه گفتگوها.');
+            // پرتاب مجدد خطا تا در لایه بالاتر مدیریت شود
+            throw error;
         }
     }
 
@@ -206,7 +209,7 @@ class ChatEngine extends EventEmitter {
         this.emit('loading', this.isLoading);
     }
 
-    // --- Delegated Methods ---
+    // --- متدهای واگذار شده (Delegated Methods) ---
 
     /**
      * یک گپ جدید ایجاد کرده و آن را به عنوان گپ فعال تنظیم می‌کند.
@@ -220,10 +223,10 @@ class ChatEngine extends EventEmitter {
     /**
      * گپ فعال فعلی را به گپ دیگری با شناسه مشخص تغییر می‌دهد.
      * @param {string} chatId - شناسه گپ مورد نظر.
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    switchActiveChat(chatId) {
-        return this.chatManager.switchActiveChat(chatId);
+    async switchActiveChat(chatId) {
+        await this.chatManager.switchActiveChat(chatId);
     }
 
     /**
@@ -270,8 +273,8 @@ class ChatEngine extends EventEmitter {
     destroy() {
         this.syncManager.destroy();
         this.storageManager.destroy();
-        super.destroy(); // All event listeners are cleared
-        console.log('ChatEngine destroyed.');
+        super.destroy(); // تمام شنوندگان رویداد پاک می‌شوند
+        console.log('ChatEngine نابود شد.');
     }
 }
 

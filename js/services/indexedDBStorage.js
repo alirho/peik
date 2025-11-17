@@ -1,4 +1,4 @@
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../types.js').StorageAdapter} StorageAdapter */
 /** @typedef {import('../types.js').Chat} Chat */
 /** @typedef {import('../types.js').Settings} Settings */
@@ -21,8 +21,8 @@ const STORAGE_WARNING_THRESHOLD_BYTES = 45 * 1024 * 1024; // 45 MB
 let dbPromise = null;
 
 /**
- * Initializes the IndexedDB database, handling potential errors.
- * @returns {Promise<IDBDatabase>} A promise that resolves with the database instance.
+ * پایگاه داده IndexedDB را راه‌اندازی کرده و خطاهای احتمالی را مدیریت می‌کند.
+ * @returns {Promise<IDBDatabase>} یک Promise که با نمونه پایگاه داده resolve می‌شود.
  */
 function initDB() {
     if (dbPromise) {
@@ -61,10 +61,10 @@ function initDB() {
         };
 
         request.onblocked = () => {
-            // This event is fired when a version upgrade is needed but another tab has the DB open.
+            // این رویداد زمانی رخ می‌دهد که نیاز به ارتقاء نسخه باشد اما یک تب دیگر پایگاه داده را باز نگه داشته است.
             console.warn("ارتقاء پایگاه داده مسدود شده است. لطفاً تب‌های دیگر برنامه را ببندید.");
-            // We don't reject here because the user should be prompted to close other tabs.
-            // The request will remain blocked until other connections are closed.
+            // در اینجا reject نمی‌کنیم چون کاربر باید فرصت داشته باشد تب‌های دیگر را ببندد.
+            // درخواست تا زمان بسته شدن اتصالات دیگر مسدود باقی می‌ماند.
         };
     });
 
@@ -72,9 +72,9 @@ function initDB() {
 }
 
 /**
- * Handles database transaction errors, especially QuotaExceededError.
- * @param {Error} error - The error object from the transaction.
- * @throws {Error} Throws a user-friendly error.
+ * خطاهای تراکنش پایگاه داده، به ویژه QuotaExceededError را مدیریت می‌کند.
+ * @param {Error} error - آبجکت خطا از تراکنش.
+ * @throws {Error} یک خطای کاربرپسند پرتاب می‌کند.
  */
 function handleTransactionError(error) {
     if (error.name === 'QuotaExceededError') {
@@ -86,19 +86,19 @@ function handleTransactionError(error) {
 }
 
 /**
- * Estimates the size of an object in bytes.
- * @param {object} obj The object to measure.
- * @returns {number} The estimated size in bytes.
+ * اندازه یک آبجکت را به بایت تخمین می‌زند.
+ * @param {object} obj - آبجکتی که باید اندازه‌گیری شود.
+ * @returns {number} اندازه تخمینی به بایت.
  */
 function estimateSize(obj) {
-    // A simple estimation using JSON string length.
-    // Note: This is an approximation. Actual storage size may vary.
+    // یک تخمین ساده با استفاده از طول رشته JSON.
+    // توجه: این یک تقریب است. اندازه واقعی ذخیره‌سازی ممکن است متفاوت باشد.
     return new TextEncoder().encode(JSON.stringify(obj)).length;
 }
 
 /**
- * Checks storage size and logs a warning if it's near the limit.
- * @param {object} data The data being saved.
+ * اندازه فضای ذخیره‌سازی را بررسی کرده و در صورت نزدیک شدن به حد مجاز، یک هشدار ثبت می‌کند.
+ * @param {object} data - داده‌ای که در حال ذخیره شدن است.
  */
 function checkStorageSize(data) {
     try {
@@ -106,12 +106,12 @@ function checkStorageSize(data) {
             console.warn("هشدار: نزدیک به حد مجاز ذخیره‌سازی هستید.");
         }
     } catch (e) {
-        // Ignore if sizing fails
+        // در صورت شکست در اندازه‌گیری، نادیده گرفته می‌شود.
     }
 }
 
 /**
- * یک آبجکت چت را در IndexedDB ذخیره یا به‌روزرسانی می‌کند.
+ * یک آبجکت گپ را در IndexedDB ذخیره یا به‌روزرسانی می‌کند.
  * @type {StorageAdapter['saveChat']}
  */
 export async function saveChat(chat) {
@@ -132,7 +132,7 @@ export async function saveChat(chat) {
 }
 
 /**
- * یک چت را با شناسه آن از IndexedDB حذف می‌کند.
+ * یک گپ را با شناسه آن از IndexedDB حذف می‌کند.
  * @type {StorageAdapter['deleteChatById']}
  */
 export async function deleteChatById(chatId) {
@@ -152,34 +152,10 @@ export async function deleteChatById(chatId) {
 }
 
 /**
- * تمام چت‌ها را به صورت یکجا در IndexedDB ذخیره می‌کند (با پاک کردن داده‌های قبلی).
- * @param {Array<Chat>} chats - آرایه‌ای از آبجکت‌های چت.
- * @returns {Promise<void>}
+ * فقط لیست گپ‌ها (بدون پیام‌ها) را برای نمایش سریع اولیه بارگذاری می‌کند.
+ * @type {StorageAdapter['loadChatList']}
  */
-export async function saveAllChats(chats) {
-    checkStorageSize(chats);
-    try {
-        const db = await initDB();
-        const transaction = db.transaction(CHATS_STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(CHATS_STORE_NAME);
-        
-        store.clear();
-        chats.forEach(chat => store.put(chat));
-
-        return new Promise((resolve, reject) => {
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = (event) => reject(event.target.error);
-        });
-    } catch (e) {
-        handleTransactionError(e);
-    }
-}
-
-/**
- * تمام چت‌ها را از IndexedDB بارگذاری می‌کند.
- * @type {StorageAdapter['loadAllChats']}
- */
-export async function loadAllChats() {
+export async function loadChatList() {
     try {
         const db = await initDB();
         const transaction = db.transaction(CHATS_STORE_NAME, 'readonly');
@@ -187,15 +163,47 @@ export async function loadAllChats() {
         const request = store.getAll();
         
         return new Promise((resolve, reject) => {
-            request.onsuccess = () => resolve(request.result || []);
+            request.onsuccess = () => {
+                const chats = request.result || [];
+                // برای بهینه‌سازی، فیلد پیام‌ها را از هر گپ حذف می‌کنیم.
+                const chatList = chats.map(chat => {
+                    delete chat.messages;
+                    return chat;
+                });
+                resolve(chatList);
+            };
             request.onerror = (event) => {
-                console.error("Failed to load chats:", event.target.error);
-                reject(new GenericStorageError("خطا در خواندن تاریخچه گفتگوها."));
+                console.error("بارگذاری لیست گپ‌ها ناموفق بود:", event.target.error);
+                reject(new GenericStorageError("خطا در خواندن لیست گفتگوها."));
             };
         });
     } catch (e) {
-        console.error("Failed to load chats from storage:", e);
-        throw e; // Re-throw the user-friendly error from initDB
+        console.error("خطا در بارگذاری لیست گپ‌ها از حافظه:", e);
+        throw e; // پرتاب مجدد خطای کاربرپسند از initDB
+    }
+}
+
+/**
+ * یک گپ کامل (شامل پیام‌ها) را بر اساس شناسه آن بارگذاری می‌کند.
+ * @type {StorageAdapter['loadChatById']}
+ */
+export async function loadChatById(chatId) {
+    try {
+        const db = await initDB();
+        const transaction = db.transaction(CHATS_STORE_NAME, 'readonly');
+        const store = transaction.objectStore(CHATS_STORE_NAME);
+        const request = store.get(chatId);
+        
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = (event) => {
+                console.error(`بارگذاری گپ ${chatId} ناموفق بود:`, event.target.error);
+                reject(new GenericStorageError("خطا در خواندن تاریخچه گفتگو."));
+            };
+        });
+    } catch (e) {
+        console.error(`خطا در بارگذاری گپ ${chatId} از حافظه:`, e);
+        throw e;
     }
 }
 
@@ -233,12 +241,12 @@ export async function loadSettings() {
         return new Promise((resolve, reject) => {
             request.onsuccess = () => resolve(request.result || null);
             request.onerror = (event) => {
-                console.error("Failed to load settings:", event.target.error);
+                console.error("بارگذاری تنظیمات ناموفق بود:", event.target.error);
                 reject(new GenericStorageError("خطا در خواندن تنظیمات."));
             };
         });
     } catch (e) {
-        console.error("Failed to load settings from storage:", e);
-        throw e; // Re-throw the user-friendly error from initDB
+        console.error("خطا در بارگذاری تنظیمات از حافظه:", e);
+        throw e;
     }
 }

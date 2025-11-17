@@ -6,7 +6,7 @@
 
 ## 1. رابط API مورد نیاز (Required API Interface)
 
-هر آداپتور ذخیره‌سازی باید یک آبجکت یا ماژول باشد که **۵ متد `async`** زیر را `export` می‌کند. تمام این متدها باید `Promise` برگردانند.
+هر آداپتور ذخیره‌سازی باید یک آبجکت یا ماژول باشد که **۶ متد `async`** زیر را `export` می‌کند. تمام این متدها باید `Promise` برگردانند.
 
 ---
 
@@ -24,10 +24,17 @@
 
 ---
 
-### `async function loadAllChats()`
-- **وظیفه**: بارگذاری تمام گفتگوهای ذخیره شده.
+### `async function loadChatList()`
+- **وظیفه**: بارگذاری **فقط لیست گفتگوها** (بدون پیام‌هایشان) برای نمایش سریع اولیه.
 - **پارامترها**: ندارد.
-- **مقدار بازگشتی**: `Promise<Array<object>>` - آرایه‌ای از تمام آبجکت‌های چت. اگر هیچ چتی وجود نداشته باشد، باید یک آرایه خالی برگرداند.
+- **مقدار بازگشتی**: `Promise<Array<object>>` - آرایه‌ای از آبجکت‌های چت که هر کدام **نباید** شامل فیلد `messages` باشند. اگر هیچ چتی وجود نداشته باشد، باید یک آرایه خالی برگرداند.
+
+---
+
+### `async function loadChatById(chatId)`
+- **وظیفه**: بارگذاری **یک گفتگوی کامل** (شامل تمام پیام‌ها) بر اساس شناسه آن.
+- **پارامترها**: `chatId: string` - شناسه چت مورد نظر.
+- **مقدار بازگشتی**: `Promise<object | null>` - آبجکت کامل چت یا `null` اگر یافت نشد.
 
 ---
 
@@ -60,20 +67,23 @@ const chats = new Map();
 export async function loadSettings() {
     return settings;
 }
-
 export async function saveSettings(newSettings) {
     settings = newSettings;
 }
-
-export async function loadAllChats() {
-    return Array.from(chats.values());
+export async function loadChatList() {
+    const list = [];
+    for (const chat of chats.values()) {
+        const { messages, ...chatWithoutMessages } = chat;
+        list.push(chatWithoutMessages);
+    }
+    return list;
 }
-
+export async function loadChatById(chatId) {
+    return chats.get(chatId) || null;
+}
 export async function saveChat(chat) {
-    // Clone to prevent mutation issues, mimicking database behavior
     chats.set(chat.id, JSON.parse(JSON.stringify(chat)));
 }
-
 export async function deleteChatById(chatId) {
     chats.delete(chatId);
 }
@@ -86,97 +96,24 @@ export async function deleteChatById(chatId) {
 ```javascript
 // js/services/indexedDBStorage.js (خلاصه شده)
 
-const DB_NAME = 'GougDB';
-const DB_VERSION = 1;
+function initDB() { /* ... */ }
 
-function initDB() {
-    // ... منطق کامل برای باز کردن و ارتقاء پایگاه داده
-    return dbPromise;
-}
-
-export async function saveChat(chat) {
+export async function loadChatList() {
     const db = await initDB();
-    const transaction = db.transaction('chats', 'readwrite');
-    const store = transaction.objectStore('chats');
-    store.put(chat);
-    // ... مدیریت oncomplete و onerror تراکنش
+    const store = db.transaction('chats').objectStore('chats');
+    const allChats = await store.getAll();
+    // حذف فیلد پیام‌ها قبل از بازگرداندن
+    allChats.forEach(chat => delete chat.messages);
+    return allChats;
 }
 
-export async function loadAllChats() {
+export async function loadChatById(chatId) {
     const db = await initDB();
-    const transaction = db.transaction('chats', 'readonly');
-    const store = transaction.objectStore('chats');
-    const request = store.getAll();
-    // ... مدیریت onsuccess و onerror درخواست
+    const store = db.transaction('chats').objectStore('chats');
+    return await store.get(chatId);
 }
 
-// ... پیاده‌سازی سایر متدها (deleteChatById, saveSettings, loadSettings)
-```
-
-### مثال ۳: ذخیره‌سازی در فایل سیستم (برای Node.js)
-
-این یک مثال مفهومی است که نشان می‌دهد چگونه می‌توان یک آداپتور برای محیط Node.js ساخت که داده‌ها را در فایل‌های JSON ذخیره می‌کند.
-
-```javascript
-// services/fileSystemStorage.js (مفهومی)
-
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
-const CHATS_DIR = path.join(DATA_DIR, 'chats');
-
-// اطمینان از وجود دایرکتوری‌ها
-async function ensureDirs() {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.mkdir(CHATS_DIR, { recursive: true });
-}
-
-export async function loadSettings() {
-    await ensureDirs();
-    try {
-        const data = await fs.readFile(SETTINGS_FILE, 'utf-8');
-        return JSON.parse(data);
-    } catch (error) {
-        if (error.code === 'ENOENT') return null; // File not found
-        throw error;
-    }
-}
-
-export async function saveSettings(settings) {
-    await ensureDirs();
-    await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2));
-}
-
-export async function loadAllChats() {
-    await ensureDirs();
-    const files = await fs.readdir(CHATS_DIR);
-    const chatPromises = files.map(async (file) => {
-        if (file.endsWith('.json')) {
-            const data = await fs.readFile(path.join(CHATS_DIR, file), 'utf-8');
-            return JSON.parse(data);
-        }
-        return null;
-    });
-    return (await Promise.all(chatPromises)).filter(Boolean);
-}
-
-export async function saveChat(chat) {
-    await ensureDirs();
-    const filePath = path.join(CHATS_DIR, `${chat.id}.json`);
-    await fs.writeFile(filePath, JSON.stringify(chat, null, 2));
-}
-
-export async function deleteChatById(chatId) {
-    await ensureDirs();
-    const filePath = path.join(CHATS_DIR, `${chatId}.json`);
-    try {
-        await fs.unlink(filePath);
-    } catch (error) {
-        if (error.code !== 'ENOENT') throw error; // Ignore if file doesn't exist
-    }
-}
+// ... پیاده‌سازی سایر متدها
 ```
 
 ## 3. نکات مهم
