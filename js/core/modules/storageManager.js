@@ -1,6 +1,6 @@
 import { STORAGE_CONFIG } from '../../utils/constants.js';
 
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').Chat} Chat */
 /** @typedef {import('../chatEngine.js').default} ChatEngine */
 
@@ -29,15 +29,15 @@ class StorageManager {
         for (let attempt = 0; attempt < STORAGE_CONFIG.MAX_SAVE_RETRIES; attempt++) {
             try {
                 await this.engine.storage.saveChat(chat);
-                // On success, also remove it from the unsaved list if it was there
+                // در صورت موفقیت، اگر در لیست ذخیره‌نشده‌ها بود، آن را حذف کن
                 const index = this.unsavedChats.findIndex(c => c.id === chat.id);
                 if (index > -1) {
                     this.unsavedChats.splice(index, 1);
                     this.engine.emit('success', `گپ "${chat.title}" که قبلا ذخیره نشده بود، با موفقیت ذخیره شد.`);
                 }
-                return true; // Indicate success
+                return true; // نشان‌دهنده موفقیت
             } catch (error) {
-                console.error(`Save attempt ${attempt + 1} failed for chat ${chat.id}:`, error);
+                console.error(`تلاش برای ذخیره ${attempt + 1} برای گپ ${chat.id} ناموفق بود:`, error);
                 if (attempt < STORAGE_CONFIG.MAX_SAVE_RETRIES - 1) {
                     await new Promise(resolve => setTimeout(resolve, STORAGE_CONFIG.SAVE_RETRY_DELAY_MS));
                 } else {
@@ -45,7 +45,7 @@ class StorageManager {
                 }
             }
         }
-        return false; // Indicate failure
+        return false; // نشان‌دهنده شکست
     }
 
     /**
@@ -54,14 +54,14 @@ class StorageManager {
      * @param {Error} error - آبجکت خطای نهایی.
      */
     handleSaveFailure(chat, error) {
-        // Avoid adding duplicates
+        // جلوگیری از افزودن موارد تکراری
         if (!this.unsavedChats.some(c => c.id === chat.id)) {
             this.unsavedChats.push(chat);
         }
         
         this.engine.emit('error', `ذخیره‌سازی ناموفق بود. برنامه به صورت خودکار دوباره تلاش خواهد کرد. لطفاً صفحه را بازنشانی نکنید!`);
 
-        // Start the retry interval if it's not already running
+        // اگر تایمر در حال اجرا نیست، آن را شروع کن
         if (!this.unsavedRetryInterval) {
             this.startUnsavedRetryInterval();
         }
@@ -88,24 +88,24 @@ class StorageManager {
             return;
         }
 
-        console.log(`Attempting to save ${this.unsavedChats.length} unsaved chat(s)...`);
+        console.log(`تلاش برای ذخیره ${this.unsavedChats.length} گپ ذخیره نشده...`);
         
-        // Use a functional approach to avoid modifying the array while iterating
+        // استفاده از رویکرد تابعی برای جلوگیری از تغییر آرایه در حین پیمایش
         const savePromises = this.unsavedChats.map(async (chat) => {
             try {
                 await this.engine.storage.saveChat(chat);
                 this.engine.syncManager.broadcastUpdate();
                 this.engine.emit('success', `گپ "${chat.title}" با موفقیت ذخیره شد.`);
-                return null; // Represents a successfully saved chat to be filtered out
+                return null; // نشان‌دهنده گپ موفق برای فیلتر شدن
             } catch (error) {
-                return chat; // Represents a chat that failed again
+                return chat; // نشان‌دهنده گپی که دوباره ناموفق بود
             }
         });
         
         const results = await Promise.all(savePromises);
         this.unsavedChats = results.filter(chat => chat !== null);
 
-        // If all chats are saved, the list will be empty and the interval will be cleared on the next run.
+        // اگر تمام گپ‌ها ذخیره شوند، لیست خالی شده و تایمر در اجرای بعدی متوقف می‌شود.
     }
 
     /**

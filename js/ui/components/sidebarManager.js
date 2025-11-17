@@ -1,9 +1,9 @@
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').Chat} Chat */
 /** @typedef {import('../../core/chatEngine.js').default} ChatEngine */
 
 /**
- * رندر و تعاملات لیست چت‌ها در سایدبار را مدیریت می‌کند.
+ * رندر و تعاملات لیست گپ‌ها در سایدبار را مدیریت می‌کند.
  */
 class SidebarManager {
     /**
@@ -16,7 +16,7 @@ class SidebarManager {
         this.sidebar = document.querySelector('.sidebar');
         this.activeMenu = null;
 
-        // Cache confirmation modal elements
+        // کش کردن المان‌های مودال تأیید
         this.confirmationModal = document.getElementById('confirmation-modal');
         this.confirmationModalTitle = document.getElementById('confirmation-modal-title');
         this.confirmationModalBody = document.getElementById('confirmation-modal-body');
@@ -25,7 +25,7 @@ class SidebarManager {
         
         this.confirmHandler = null;
 
-        // --- Bound event handlers for easy removal ---
+        // --- ثبت event handlerهای bind شده برای حذف آسان ---
         this.handleGlobalClickBound = this._handleGlobalClick.bind(this);
         this.handleMobileMenuClickBound = this._handleMobileMenuClick.bind(this);
         this.hideConfirmationModalBound = this.hideConfirmationModal.bind(this);
@@ -36,15 +36,15 @@ class SidebarManager {
     }
 
     /**
-     * لیست چت‌ها را در سایدبار رندر می‌کند.
-     * @param {Array<Chat>} chats - لیست آبجکت‌های چت.
-     * @param {string} activeChatId - شناسه چت فعال فعلی.
+     * لیست گپ‌ها را در سایدبار رندر می‌کند.
+     * @param {Array<Chat>} chats - لیست آبجکت‌های گپ.
+     * @param {string} activeChatId - شناسه گپ فعال فعلی.
      */
     render(chats, activeChatId) {
         this.container.innerHTML = '';
         if (!chats || chats.length === 0) return;
 
-        // Sort chats by last updated date, descending
+        // مرتب‌سازی گپ‌ها بر اساس تاریخ آخرین به‌روزرسانی، نزولی
         const sortedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
 
         sortedChats.forEach(chat => {
@@ -54,10 +54,10 @@ class SidebarManager {
     }
 
     /**
-     * Creates a single chat item element for the sidebar list.
-     * @param {Chat} chat - The chat object.
-     * @param {string} activeChatId - The ID of the active chat.
-     * @returns {HTMLElement} The created list item element.
+     * یک المان آیتم گپ برای لیست سایدبار ایجاد می‌کند.
+     * @param {Chat} chat - آبجکت گپ.
+     * @param {string} activeChatId - شناسه گپ فعال.
+     * @returns {HTMLElement} المان لیست آیتم ایجاد شده.
      */
     createChatItemElement(chat, activeChatId) {
         const item = document.createElement('div');
@@ -75,7 +75,7 @@ class SidebarManager {
         const menuButton = this.createActionsMenu(chat);
         item.appendChild(menuButton);
 
-        // Switch chat on click, but not if the menu button was clicked
+        // با کلیک، گپ را عوض کن، اما نه اگر روی دکمه منو کلیک شده باشد
         item.addEventListener('click', (e) => {
             if (!menuButton.contains(e.target)) {
                 this.engine.switchActiveChat(chat.id);
@@ -89,9 +89,9 @@ class SidebarManager {
     }
 
     /**
-     * Creates the three-dot action menu for a chat item.
-     * @param {Chat} chat - The chat object.
-     * @returns {HTMLElement} The menu button element.
+     * منوی عملیات سه‌نقطه را برای یک آیتم گپ ایجاد می‌کند.
+     * @param {Chat} chat - آبجکت گپ.
+     * @returns {HTMLElement} المان دکمه منو.
      */
     createActionsMenu(chat) {
         const wrapper = document.createElement('div');
@@ -111,9 +111,9 @@ class SidebarManager {
     }
 
     /**
-     * Toggles the visibility of the actions menu.
-     * @param {HTMLElement} buttonEl - The button that was clicked.
-     * @param {Chat} chat - The associated chat object.
+     * نمایش منوی عملیات را تغییر می‌دهد.
+     * @param {HTMLElement} buttonEl - دکمه‌ای که کلیک شده.
+     * @param {Chat} chat - آبجکت گپ مرتبط.
      */
     toggleMenu(buttonEl, chat) {
         if (this.activeMenu && this.activeMenu.button === buttonEl) {
@@ -184,7 +184,7 @@ class SidebarManager {
             }
         });
 
-        // Securely set the input value after it has been rendered
+        // مقدار ورودی را به صورت امن پس از رندر شدن تنظیم کن
         const renameInput = document.getElementById('rename-input');
         if (renameInput) {
             renameInput.value = chat.title;
@@ -205,12 +205,12 @@ class SidebarManager {
     }
 
     _handleGlobalClick(e) {
-        // Close actions menu on outside click
+        // بستن منوی عملیات با کلیک در بیرون
         if (this.activeMenu && !this.activeMenu.button.contains(e.target) && !this.activeMenu.element.contains(e.target)) {
             this.closeActiveMenu();
         }
 
-        // Close confirmation modal on overlay click
+        // بستن مودال تأیید با کلیک روی overlay
         if (e.target === this.confirmationModal) {
             this.hideConfirmationModal();
         }

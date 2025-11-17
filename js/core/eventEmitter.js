@@ -1,5 +1,5 @@
 /**
- * A simple event emitter class for implementing the pub/sub pattern.
+ * یک کلاس ساده برای پیاده‌سازی الگوی pub/sub (انتشار/اشتراک).
  */
 class EventEmitter {
     constructor() {
@@ -7,9 +7,9 @@ class EventEmitter {
     }
 
     /**
-     * Subscribes a listener function to an event.
-     * @param {string} eventName - The name of the event.
-     * @param {Function} listener - The callback function to execute.
+     * یک تابع شنونده (listener) را برای یک رویداد ثبت می‌کند.
+     * @param {string} eventName - نام رویداد.
+     * @param {Function} listener - تابع callback که باید اجرا شود.
      */
     on(eventName, listener) {
         if (!this.events[eventName]) {
@@ -19,9 +19,9 @@ class EventEmitter {
     }
 
     /**
-     * Unsubscribes a listener function from an event.
-     * @param {string} eventName - The name of the event.
-     * @param {Function} listenerToRemove - The specific callback function to remove.
+     * یک تابع شنونده را از یک رویداد حذف می‌کند.
+     * @param {string} eventName - نام رویداد.
+     * @param {Function} listenerToRemove - تابع callback مشخصی که باید حذف شود.
      */
     off(eventName, listenerToRemove) {
         if (!this.events[eventName]) {
@@ -33,10 +33,10 @@ class EventEmitter {
     }
 
     /**
-     * Emits an event, calling all subscribed listeners with the provided data.
-     * Errors in one listener will not prevent others from being called.
-     * @param {string} eventName - The name of the event to emit.
-     * @param {*} data - The data to pass to the listeners.
+     * یک رویداد را منتشر کرده و تمام شنوندگان ثبت‌شده را با داده‌های ارائه‌شده فراخوانی می‌کند.
+     * خطا در یک شنونده مانع از فراخوانی دیگران نمی‌شود.
+     * @param {string} eventName - نام رویدادی که باید منتشر شود.
+     * @param {*} data - داده‌ای که باید به شنوندگان ارسال شود.
      */
     emit(eventName, data) {
         if (this.events[eventName]) {
@@ -44,14 +44,14 @@ class EventEmitter {
                 try {
                     listener(data);
                 } catch (error) {
-                    console.error(`Error in listener for event "${eventName}":`, error);
+                    console.error(`خطا در شنونده برای رویداد "${eventName}":`, error);
                 }
             });
         }
     }
 
     /**
-     * Removes all listeners for all events.
+     * تمام شنوندگان برای تمام رویدادها را حذف می‌کند.
      */
     destroy() {
         this.events = {};

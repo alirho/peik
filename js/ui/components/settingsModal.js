@@ -1,4 +1,4 @@
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').Settings} Settings */
 /** @typedef {import('../../core/chatEngine.js').default} ChatEngine */
 
@@ -13,7 +13,7 @@ class SettingsModal {
         this.engine = engine;
         this.cacheDOMElements();
 
-        // --- Bound event handlers for easy removal ---
+        // --- ثبت event handlerهای bind شده برای حذف آسان ---
         this.handleSaveBound = this.handleSave.bind(this);
         this.hideBound = () => this.show(false);
         this.showBound = () => this.show(true);
@@ -25,7 +25,7 @@ class SettingsModal {
     }
 
     /**
-     * Caches references to frequently used DOM elements within the modal.
+     * ارجاع به المان‌های DOM پرکاربرد در مودال را کش می‌کند.
      */
     cacheDOMElements() {
         this.modal = document.getElementById('settings-modal');
@@ -33,7 +33,7 @@ class SettingsModal {
         this.cancelButton = document.getElementById('cancel-settings-button');
         this.editButton = document.getElementById('edit-settings-button');
         
-        // Input fields
+        // فیلدهای ورودی
         this.geminiModelInput = document.getElementById('gemini-model-input');
         this.geminiKeyInput = document.getElementById('gemini-key-input');
         this.chatgptModelInput = document.getElementById('chatgpt-model-input');
@@ -42,17 +42,17 @@ class SettingsModal {
         this.customKeyInput = document.getElementById('custom-key-input');
         this.customEndpointInput = document.getElementById('custom-endpoint-input');
         
-        // Key toggles
+        // دکمه‌های نمایش/پنهان کلید
         this.geminiKeyToggle = document.getElementById('gemini-key-toggle');
         this.chatgptKeyToggle = document.getElementById('chatgpt-key-toggle');
         this.customKeyToggle = document.getElementById('custom-key-toggle');
 
-        // Security checkbox
+        // چک‌باکس امنیتی
         this.sessionOnlyCheckbox = document.getElementById('session-only-checkbox');
     }
 
     /**
-     * Binds event listeners to the modal's interactive elements.
+     * شنوندگان رویداد را به المان‌های تعاملی مودال متصل می‌کند.
      */
     bindEvents() {
         this.form.addEventListener('submit', this.handleSaveBound);
@@ -65,7 +65,7 @@ class SettingsModal {
     }
 
     /**
-     * Removes all event listeners attached by this component.
+     * تمام شنوندگان رویداد متصل شده توسط این کامپوننت را حذف می‌کند.
      */
     destroy() {
         this.form.removeEventListener('submit', this.handleSaveBound);
@@ -89,24 +89,24 @@ class SettingsModal {
     }
 
     /**
-     * Handles the form submission to save settings.
-     * @param {Event} e The submit event.
+     * ارسال فرم برای ذخیره تنظیمات را مدیریت می‌کند.
+     * @param {Event} e - رویداد submit.
      */
     async handleSave(e) {
         e.preventDefault();
         
         const settings = this.getSettingsFromForm();
         if (!settings) {
-            return; // Validation failed in getSettingsFromForm
+            return; // اعتبارسنجی در getSettingsFromForm ناموفق بود
         }
         
         if (this.sessionOnlyCheckbox.checked) {
-            // Apply settings only for the current session without persisting
+            // تنظیمات را فقط برای نشست فعلی بدون ذخیره دائمی اعمال کن
             this.engine.settings = settings;
             this.show(false);
             alert('تنظیمات فقط برای این نشست اعمال شد و پس از بستن تب پاک خواهد شد.');
         } else {
-            // Persist settings normally
+            // تنظیمات را به طور معمول ذخیره کن
             await this.engine.saveSettings(settings);
         }
     }
@@ -147,7 +147,7 @@ class SettingsModal {
      */
     populateForm() {
         this.form.reset();
-        this.sessionOnlyCheckbox.checked = false; // Default to persistent storage
+        this.sessionOnlyCheckbox.checked = false; // پیش‌فرض به ذخیره‌سازی پایدار
         
         const settings = this.engine.settings;
         if (settings) {
@@ -172,9 +172,9 @@ class SettingsModal {
     }
 
     /**
-     * Toggles the visibility of a password input field.
-     * @param {HTMLInputElement} inputElement The password input field.
-     * @param {HTMLButtonElement} buttonElement The toggle button.
+     * قابلیت مشاهده یک فیلد ورودی رمز عبور را تغییر می‌دهد.
+     * @param {HTMLInputElement} inputElement - فیلد ورودی رمز عبور.
+     * @param {HTMLButtonElement} buttonElement - دکمه تغییر وضعیت.
      */
     togglePasswordVisibility(inputElement, buttonElement) {
         const icon = buttonElement.querySelector('.material-symbols-outlined');

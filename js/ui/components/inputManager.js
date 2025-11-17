@@ -1,14 +1,14 @@
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').ImageData} ImageData */
 /** @typedef {import('./fileManager.js').default} FileManager */
 
 /**
- * Manages the user input area, including text, attachments, previews, and send button state.
+ * ناحیه ورودی کاربر، شامل متن، پیوست‌ها، پیش‌نمایش‌ها و وضعیت دکمه ارسال را مدیریت می‌کند.
  */
 class InputManager {
     /**
-     * @param {FileManager} fileManager - The file manager instance.
-     * @param {function(string, ImageData | null): void} onSendMessage - Callback to send the message.
+     * @param {FileManager} fileManager - نمونه مدیریت فایل.
+     * @param {function(string, ImageData | null): void} onSendMessage - Callback برای ارسال پیام.
      */
     constructor(fileManager, onSendMessage) {
         this.fileManager = fileManager;
@@ -20,7 +20,7 @@ class InputManager {
 
         this.cacheDOMElements();
 
-        // --- Bound event handlers for easy removal ---
+        // --- ثبت event handlerهای bind شده برای حذف آسان ---
         this.handleSubmitBound = (e) => {
             e.preventDefault();
             this.submit();
@@ -55,7 +55,7 @@ class InputManager {
     }
 
     /**
-     * Removes all event listeners.
+     * تمام شنوندگان رویداد را حذف می‌کند.
      */
     destroy() {
         this.dom.chatForm.removeEventListener('submit', this.handleSubmitBound);
@@ -65,7 +65,7 @@ class InputManager {
     }
 
     /**
-     * Handles the submission of the input form.
+     * ارسال فرم ورودی را مدیریت می‌کند.
      */
     submit() {
         if (this.isSubmitting) {
@@ -76,25 +76,25 @@ class InputManager {
         const image = this.attachedImage;
         
         if (!userInput && !image) {
-            return; // Prevent sending empty messages
+            return; // از ارسال پیام‌های خالی جلوگیری کن
         }
 
         this.isSubmitting = true;
-        this.updateSendButtonState(true); // Visually indicate loading immediately
+        this.updateSendButtonState(true); // وضعیت بارگذاری را فوراً به صورت بصری نشان بده
 
-        // Safety timeout to prevent the UI from getting stuck in a submitting state
+        // یک تایم‌اوت ایمنی برای جلوگیری از گیر کردن UI در حالت ارسال
         setTimeout(() => {
             if (this.isSubmitting) {
-                console.warn('Submission safety timeout triggered. Resetting UI state.');
+                console.warn('تایم‌اوت ایمنی ارسال فعال شد. ریست کردن وضعیت UI.');
                 this.updateSendButtonState(false);
             }
-        }, 30000); // 30 seconds
+        }, 30000); // 30 ثانیه
 
         this.onSendMessage(userInput, image);
     }
 
     /**
-     * Resets the input area to its initial state.
+     * ناحیه ورودی را به حالت اولیه خود بازمی‌گرداند.
      */
     reset() {
         this.dom.messageInput.value = '';
@@ -114,8 +114,8 @@ class InputManager {
     }
 
     /**
-     * Sets the processed image and renders its preview.
-     * @param {ImageData} imageData - The processed image data.
+     * تصویر پردازش‌شده را تنظیم کرده و پیش‌نمایش آن را رندر می‌کند.
+     * @param {ImageData} imageData - داده‌های تصویر پردازش‌شده.
      */
     setAndPreviewImage(imageData) {
         this.attachedImage = imageData;
@@ -123,7 +123,7 @@ class InputManager {
     }
 
     /**
-     * Renders the preview for the currently attached image.
+     * پیش‌نمایش تصویر پیوست‌شده فعلی را رندر می‌کند.
      */
     renderPreview() {
         this.dom.imagePreviewContainer.innerHTML = '';
@@ -150,7 +150,7 @@ class InputManager {
     }
 
     /**
-     * Clears the attached image and its preview.
+     * تصویر پیوست‌شده و پیش‌نمایش آن را پاک می‌کند.
      */
     clearPreview() {
         this.attachedImage = null;
@@ -158,13 +158,13 @@ class InputManager {
     }
 
     /**
-     * Updates the state of the send button (e.g., shows a spinner).
-     * @param {boolean} isLoading - Whether the app is in a loading state.
+     * وضعیت دکمه ارسال را به‌روز می‌کند (مثلاً یک اسپینر نمایش می‌دهد).
+     * @param {boolean} isLoading - آیا برنامه در حالت بارگذاری است.
      */
     updateSendButtonState(isLoading) {
         const button = this.dom.sendButton;
         const attachButton = this.dom.attachFileButton;
-        this.isSubmitting = isLoading; // Sync submission state with loading state
+        this.isSubmitting = isLoading; // همگام‌سازی وضعیت ارسال با وضعیت بارگذاری
 
         if (isLoading) {
             button.disabled = true;

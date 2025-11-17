@@ -1,10 +1,10 @@
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').ImageData} ImageData */
 /** @typedef {import('../chatEngine.js').default} ChatEngine */
 
 /**
- * Generates a unique ID for a message.
- * @returns {string} The unique message ID.
+ * یک شناسه یکتا برای پیام ایجاد می‌کند.
+ * @returns {string} شناسه پیام یکتا.
  */
 function generateMessageId() {
     const timestamp = Date.now();
@@ -43,10 +43,10 @@ class MessageHandler {
      * @returns {Promise<void>}
      */
     async sendMessage(userInput, image = null) {
-        // Cancel any previous request before starting a new one.
+        // لغو هر درخواست قبلی قبل از شروع یک درخواست جدید.
         this.cancelCurrentStream();
 
-        // Create a new controller for the current request.
+        // ایجاد یک کنترلر جدید برای درخواست فعلی.
         const currentController = new AbortController();
         this.abortController = currentController;
         
@@ -56,7 +56,7 @@ class MessageHandler {
 
         const { maxMessageLength, maxMessagesPerChat } = this.engine.limits;
 
-        // --- Provider and Settings Validation ---
+        // --- اعتبارسنجی ارائه‌دهنده و تنظیمات ---
         if (!this.engine.settings || !this.engine.settings.provider || (!this.engine.settings.apiKey && this.engine.settings.provider !== 'custom')) {
             this.engine.emit('error', 'تنظیمات API صحیح نیست. لطفاً تنظیمات را بررسی کنید.');
             return;
@@ -67,7 +67,7 @@ class MessageHandler {
             return;
         }
 
-        // --- Input Validation ---
+        // --- اعتبارسنجی ورودی ---
         const hasText = typeof userInput === 'string' && userInput.trim().length > 0;
         const hasImage = image && typeof image === 'object';
         if (!hasText && !hasImage) return;
@@ -86,11 +86,13 @@ class MessageHandler {
         }
 
         const activeChat = this.engine.getActiveChat();
-        if (!activeChat) {
+        if (!activeChat || !activeChat.messages) {
+            // این حالت نباید رخ دهد چون پیام‌ها باید قبل از ارسال بارگذاری شده باشند
+            this.engine.emit('error', 'گپ فعال برای ارسال پیام در دسترس نیست.');
             return;
         }
 
-        // --- Chat Limits Validation ---
+        // --- اعتبارسنجی محدودیت‌های گپ ---
         const userMessageCount = activeChat.messages.filter(m => m.role === 'user').length;
         if (maxMessagesPerChat !== Infinity && userMessageCount >= maxMessagesPerChat) {
             this.engine.emit('error', `حداکثر ${maxMessagesPerChat} پیام در هر گپ مجاز است.`);
@@ -99,7 +101,7 @@ class MessageHandler {
 
         this.engine.setLoading(true);
         
-        // --- Message Creation & UI Update ---
+        // --- ایجاد پیام و به‌روزرسانی UI ---
         const userMessage = {
             id: generateMessageId(),
             timestamp: Date.now(),
@@ -111,7 +113,7 @@ class MessageHandler {
         activeChat.messages.push(userMessage);
         this.engine.emit('message', userMessage);
         
-        // --- Auto-titling Logic ---
+        // --- منطق عنوان‌دهی خودکار ---
         if (activeChat.messages.length === 1) {
             let title = userInput.substring(0, 30);
             if (!title && image) title = 'گپ با تصویر';
@@ -121,7 +123,7 @@ class MessageHandler {
             this.engine.emit('activeChatSwitched', activeChat);
         }
 
-        // --- API Call ---
+        // --- فراخوانی API ---
         const modelMessage = { id: generateMessageId(), timestamp: Date.now(), role: 'model', content: '' };
         activeChat.messages.push(modelMessage);
         this.engine.emit('message', modelMessage);
@@ -137,25 +139,25 @@ class MessageHandler {
                     fullResponse += chunk;
                     this.engine.emit('chunk', chunk);
                 },
-                currentController.signal // Pass the signal to the provider
+                currentController.signal // ارسال سیگنال به ارائه‌دهنده
             );
 
             const lastMsg = activeChat.messages[activeChat.messages.length - 1];
             if (lastMsg) lastMsg.content = fullResponse;
 
         } catch (error) {
-            // Gracefully handle intentional cancellations
+            // مدیریت لغو عمدی درخواست
             if (error.name === 'AbortError') {
-                console.log('Request was intentionally cancelled.');
-                 // Remove the empty model message placeholder on cancellation
+                console.log('درخواست به صورت عمدی لغو شد.');
+                 // حذف پیام خالی مدل در صورت لغو
                  if (activeChat.messages.length > 0 && activeChat.messages[activeChat.messages.length - 1].id === modelMessage.id) {
                     activeChat.messages.pop();
                     this.engine.emit('messageRemoved');
                 }
             } else {
-                console.error('API call failed:', error);
+                console.error('فراخوانی API ناموفق بود:', error);
                 const errorMessage = error.message || 'یک خطای ناشناخته رخ داد.';
-                // Remove the empty model message placeholder on error
+                // حذف پیام خالی مدل در صورت خطا
                 if (activeChat.messages.length > 0 && activeChat.messages[activeChat.messages.length - 1].role === 'model') {
                     activeChat.messages.pop();
                     this.engine.emit('messageRemoved');
@@ -163,7 +165,7 @@ class MessageHandler {
                 this.engine.emit('error', errorMessage);
             }
         } finally {
-            // Only nullify if this controller is still the active one
+            // کنترلر را فقط در صورتی null کن که هنوز کنترلر فعال باشد
             if (this.abortController === currentController) {
                 this.abortController = null;
             }

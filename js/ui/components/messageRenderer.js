@@ -1,7 +1,7 @@
 import markdownService from '../../services/markdownService.js';
 import { UI_TIMEOUTS } from '../../utils/constants.js';
 
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').Message} Message */
 /** @typedef {import('./lightboxManager.js').default} LightboxManager */
 
@@ -11,7 +11,7 @@ import { UI_TIMEOUTS } from '../../utils/constants.js';
 class MessageRenderer {
     /**
      * @param {HTMLElement} messageListContainer - المان DOM که پیام‌ها در آن نمایش داده می‌شوند.
-     * @param {LightboxManager} lightboxManager - The lightbox manager instance.
+     * @param {LightboxManager} lightboxManager - نمونه مدیریت لایت‌باکس.
      */
     constructor(messageListContainer, lightboxManager) {
         this.container = messageListContainer;
@@ -44,7 +44,7 @@ class MessageRenderer {
         const { element, bubble } = this.createMessageElement(message);
         
         if (message.role === 'user') {
-            bubble.innerHTML = ''; // Clear default content
+            bubble.innerHTML = ''; // پاک کردن محتوای پیش‌فرض
             bubble.dataset.rawContent = message.content || '';
 
             if (message.image && message.image.data && message.image.mimeType) {
@@ -59,7 +59,8 @@ class MessageRenderer {
                 img.src = `data:${message.image.mimeType};base64,${message.image.data}`;
                 img.alt = 'تصویر بارگذاری شده';
                 img.className = 'message-image';
-                img.style.display = 'none'; // Hide until loaded
+                img.style.display = 'none'; // تا زمان بارگذاری پنهان بماند
+
                 imageWrapper.appendChild(img);
 
                 img.onload = () => {
@@ -97,7 +98,7 @@ class MessageRenderer {
             } else {
                 const content = message.content;
                 bubble.dataset.rawContent = content;
-                // Render with markdown if available, otherwise render plain text and mark for re-render
+                // اگر markdown در دسترس باشد با آن رندر کن، در غیر این صورت به صورت متن ساده رندر کن و برای رندر مجدد علامت‌گذاری کن
                 bubble.innerHTML = markdownService.render(content);
                 if (!markdownService.isLoaded()) {
                     bubble.dataset.needsMarkdown = 'true';
@@ -117,17 +118,17 @@ class MessageRenderer {
      * @param {string} chunk - قطعه متنی برای اضافه کردن.
      */
     appendChunk(bubbleElement, chunk) {
-        // On the first chunk, remove the typing indicator
+        // در اولین قطعه، نشانگر تایپ را حذف کن
         if (bubbleElement.querySelector('.typing-indicator')) {
             bubbleElement.innerHTML = '';
         }
         
-        // Append new text to raw content and re-render the whole bubble
+        // متن جدید را به محتوای خام اضافه کن و کل حباب را دوباره رندر کن
         const currentContent = bubbleElement.dataset.rawContent || '';
         const newContent = currentContent + chunk;
         bubbleElement.dataset.rawContent = newContent;
         
-        // Render with markdown if available, otherwise plain text and trigger load.
+        // اگر markdown در دسترس باشد با آن رندر کن، در غیر این صورت به صورت متن ساده و بارگذاری را فعال کن.
         bubbleElement.innerHTML = markdownService.render(newContent);
         if (!markdownService.isLoaded()) {
             bubbleElement.dataset.needsMarkdown = 'true';
@@ -156,7 +157,7 @@ class MessageRenderer {
 
         const bubble = document.createElement('div');
         bubble.className = 'system-message-bubble error';
-        bubble.textContent = errorMessage; // Use textContent for security
+        bubble.textContent = errorMessage; // برای امنیت از textContent استفاده کن
 
         wrapper.appendChild(bubble);
         this.container.appendChild(wrapper);
@@ -206,8 +207,8 @@ class MessageRenderer {
 
         bubble.dataset.rawContent = welcomeText;
         bubble.innerHTML = markdownService.render(welcomeText);
-        // If markdown-it isn't loaded yet, this will render as plain text.
-        // We'll mark it for re-rendering when the library becomes available.
+        // اگر markdown-it هنوز بارگذاری نشده باشد، این به صورت متن ساده رندر می‌شود.
+        // ما آن را برای رندر مجدد زمانی که کتابخانه در دسترس قرار گرفت، علامت‌گذاری می‌کنیم.
         if (!markdownService.isLoaded()) {
             bubble.dataset.needsMarkdown = 'true';
             this._ensureMarkdownIsLoadedAndRerender();
@@ -220,14 +221,14 @@ class MessageRenderer {
     scrollToBottom() {
         const chatArea = this.container.parentElement;
         if (chatArea) {
-            // A small delay can help if images are being loaded
+            // یک تأخیر کوچک می‌تواند در صورت بارگذاری تصاویر کمک‌کننده باشد
             setTimeout(() => {
                 chatArea.scrollTop = chatArea.scrollHeight;
             }, 50);
         }
     }
 
-    // --- Element Creators ---
+    // --- سازندگان المان ---
     
     /**
      * المان‌های DOM برای یک پیام واحد را ایجاد می‌کند.
@@ -251,12 +252,12 @@ class MessageRenderer {
     
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
-        // Content is now set by the calling function (appendMessage, renderHistory, etc.)
+        // محتوا اکنون توسط تابع فراخواننده (appendMessage, renderHistory, etc.) تنظیم می‌شود.
     
         contentWrapper.append(label, bubble);
 
-        // Create the copy button. For user messages, only if there's text.
-        // For assistant messages, always create it to handle streamed content.
+        // دکمه کپی را ایجاد کن. برای پیام‌های کاربر، فقط اگر متن وجود داشته باشد.
+        // برای پیام‌های دستیار، همیشه آن را ایجاد کن تا محتوای استریم شده را مدیریت کند.
         let copyButton = null;
         if (message.content || message.role !== 'user') {
             copyButton = document.createElement('button');
@@ -278,28 +279,28 @@ class MessageRenderer {
     }
     
     /**
-     * Creates the HTML string for the typing indicator.
-     * @returns {string} HTML string.
+     * رشته HTML برای نشانگر تایپ را ایجاد می‌کند.
+     * @returns {string} رشته HTML.
      */
     createTypingIndicator() {
         return `<div class="typing-indicator"><div class="dot-container"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
     }
 
     /**
-     * Handles the click event for the copy button on a message.
-     * @param {HTMLButtonElement} button The button element that was clicked.
-     * @param {string} messageId The ID of the message to copy.
+     * رویداد کلیک برای دکمه کپی روی یک پیام را مدیریت می‌کند.
+     * @param {HTMLButtonElement} button - المان دکمه‌ای که کلیک شده است.
+     * @param {string} messageId - شناسه پیامی که باید کپی شود.
      */
     async handleCopy(button, messageId) {
         const wrapper = this.container.querySelector(`[data-message-id="${messageId}"]`);
         if (!wrapper) {
-            console.error('Could not find message element for ID:', messageId);
+            console.error('المان پیام برای شناسه یافت نشد:', messageId);
             return;
         }
 
         const bubble = wrapper.querySelector('.message-bubble');
         if (!bubble) {
-            console.error('Could not find message bubble for ID:', messageId);
+            console.error('حباب پیام برای شناسه یافت نشد:', messageId);
             return;
         }
         
@@ -310,12 +311,12 @@ class MessageRenderer {
         try {
             await navigator.clipboard.writeText(textToCopy);
             
-            // Visual feedback
+            // بازخورد بصری
             button.innerHTML = `<span class="material-symbols-outlined">check</span>`;
             button.classList.add('copied');
             button.disabled = true;
 
-            // Revert after 3 seconds
+            // پس از 3 ثانیه به حالت اول برگردان
             setTimeout(() => {
                 button.innerHTML = `<span class="material-symbols-outlined">content_copy</span>`;
                 button.classList.remove('copied');
@@ -323,15 +324,14 @@ class MessageRenderer {
             }, UI_TIMEOUTS.COPY_FEEDBACK_MS);
 
         } catch (err) {
-            console.error('Failed to copy text: ', err);
+            console.error('کپی کردن متن ناموفق بود: ', err);
             button.title = 'رونوشت ناموفق بود';
             setTimeout(() => { button.title = 'رونوشت'; }, 2000);
         }
     }
 
     /**
-     * Finds all messages that were rendered as plain text and re-renders them
-     * with the fully loaded markdown parser.
+     * تمام پیام‌هایی را که به صورت متن ساده رندر شده‌اند پیدا کرده و با تجزیه‌گر کامل markdown دوباره رندر می‌کند.
      */
     rerenderUnprocessedMessages() {
         if (!markdownService.isLoaded()) return;
@@ -349,32 +349,32 @@ class MessageRenderer {
             }
         });
 
-        // If the user was at the bottom of the chat, keep them there after re-render.
+        // اگر کاربر در انتهای چت بود، پس از رندر مجدد او را همانجا نگه دار.
         if (wasScrolledToBottom) {
             this.scrollToBottom();
         }
     }
 
     /**
-     * Checks if the user is scrolled to the bottom of the chat area.
+     * بررسی می‌کند که آیا کاربر به انتهای ناحیه چت اسکرول کرده است.
      * @returns {boolean}
      */
     isScrolledToBottom() {
         const chatArea = this.container.parentElement;
         if (!chatArea) return false;
-        // A threshold of a few pixels to account for rounding errors.
+        // یک آستانه چند پیکسلی برای در نظر گرفتن خطاهای گرد کردن.
         const threshold = 10; 
         return chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < threshold;
     }
 
     /**
-     * Ensures the markdown library is loaded if needed, and schedules a re-render.
+     * اطمینان حاصل می‌کند که کتابخانه markdown در صورت نیاز بارگذاری شده و یک رندر مجدد را زمان‌بندی می‌کند.
      * @private
      */
     _ensureMarkdownIsLoadedAndRerender() {
         if (!markdownService.isLoaded()) {
-            // The load function is idempotent, so it's safe to call multiple times.
-            // It will only trigger the import once.
+            // تابع load idempotent است، بنابراین فراخوانی چندباره آن ایمن است.
+            // این فقط یک بار import را فعال می‌کند.
             markdownService.load().then(() => {
                 this.rerenderUnprocessedMessages();
             });

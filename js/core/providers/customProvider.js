@@ -2,7 +2,7 @@ import { fetchStreamWithRetries } from '../../services/apiService.js';
 import { getErrorMessageForStatus } from '../../utils/apiErrors.js';
 import { buildOpenAIRequestBody, getOpenAIErrorMessage, processOpenAIStream } from './openaiProvider.js';
 
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').ProviderHandler} ProviderHandler */
 
 /**

@@ -1,10 +1,10 @@
 /**
- * A custom error class for better handling of API errors.
+ * یک کلاس خطای سفارشی برای مدیریت بهتر خطاهای API.
  */
 export class ApiError extends Error {
     /**
-     * @param {string} message The error message.
-     * @param {number} [status] The HTTP status code.
+     * @param {string} message - پیام خطا.
+     * @param {number} [status] - کد وضعیت HTTP.
      */
     constructor(message, status) {
         super(message);
@@ -14,9 +14,9 @@ export class ApiError extends Error {
 }
 
 /**
- * Translates HTTP status codes into user-friendly messages.
- * @param {number} status The HTTP status code.
- * @returns {string} The error message.
+ * کدهای وضعیت HTTP را به پیام‌های کاربرپسند ترجمه می‌کند.
+ * @param {number} status - کد وضعیت HTTP.
+ * @returns {string} پیام خطا.
  */
 export function getErrorMessageForStatus(status) {
     switch (status) {

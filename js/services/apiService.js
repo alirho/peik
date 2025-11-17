@@ -21,9 +21,9 @@ export async function fetchStreamWithRetries(url, options, processLine, getError
             if (!response.ok) {
                 const message = await getErrorMessage(response);
                 lastError = new ApiError(message, response.status);
-                // Don't retry for client-side errors that are unlikely to change
+                // برای خطاهای سمت کلاینت که احتمالاً تغییر نمی‌کنند، دوباره تلاش نکن
                 if ([400, 401, 403, 404].includes(response.status)) throw lastError;
-                continue; // Retry for other server-side errors
+                continue; // برای خطاهای دیگر سمت سرور دوباره تلاش کن
             }
 
             const reader = response.body.getReader();
@@ -36,25 +36,25 @@ export async function fetchStreamWithRetries(url, options, processLine, getError
 
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');
-                buffer = lines.pop(); // Keep any incomplete line for the next chunk
+                buffer = lines.pop(); // هر خط ناقص را برای قطعه بعدی نگه دار
 
                 for (const line of lines) {
                     if (line.trim()) processLine(line);
                 }
             }
-            return; // Success, exit the loop
+            return; // موفقیت، از حلقه خارج شو
 
         } catch (error) {
-            // If the request was intentionally aborted, re-throw the error to be handled gracefully by the caller.
+            // اگر درخواست به صورت عمدی لغو شده باشد، خطا را مجدداً پرتاب کن تا توسط فراخواننده به درستی مدیریت شود.
             if (error.name === 'AbortError') {
                 throw error;
             }
-            if (error instanceof ApiError) throw error; // Re-throw un-retryable ApiError
+            if (error instanceof ApiError) throw error; // ApiError های غیرقابل تلاش مجدد را دوباره پرتاب کن
             
             lastError = new NetworkError();
         }
         
-        // Wait before retrying
+        // قبل از تلاش مجدد صبر کن
         if (attempt < API_CONFIG.MAX_RETRIES - 1) {
             await new Promise(resolve => setTimeout(resolve, API_CONFIG.INITIAL_DELAY_MS * Math.pow(2, attempt)));
         }

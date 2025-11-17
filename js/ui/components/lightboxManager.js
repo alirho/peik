@@ -1,5 +1,5 @@
 /**
- * Manages the logic for displaying and hiding a full-screen image lightbox.
+ * منطق نمایش و پنهان کردن یک لایت‌باکس تصویر تمام‌صفحه را مدیریت می‌کند.
  */
 class LightboxManager {
     constructor() {
@@ -8,7 +8,7 @@ class LightboxManager {
             lightboxImage: document.getElementById('lightbox-image'),
         };
 
-        // --- Bound event handlers for easy removal ---
+        // --- ثبت event handlerهای bind شده برای حذف آسان ---
         this.hideBound = this.hide.bind(this);
         this.stopPropagationBound = (e) => e.stopPropagation();
         this.handleKeyDownBound = (e) => {
@@ -29,7 +29,7 @@ class LightboxManager {
     }
 
     /**
-     * Removes all event listeners to prevent memory leaks.
+     * تمام شنوندگان رویداد را برای جلوگیری از نشت حافظه حذف می‌کند.
      */
     destroy() {
         if (!this.dom.lightbox) return;
@@ -40,8 +40,8 @@ class LightboxManager {
     }
 
     /**
-     * Shows the lightbox modal with the specified image source.
-     * @param {string} src The source URL of the image to display.
+     * مودال لایت‌باکس را با منبع تصویر مشخص شده نمایش می‌دهد.
+     * @param {string} src - آدرس URL تصویری که باید نمایش داده شود.
      */
     show(src) {
         if (!this.dom.lightbox) return;
@@ -50,12 +50,12 @@ class LightboxManager {
     }
 
     /**
-     * Hides the lightbox modal.
+     * مودال لایت‌باکس را پنهان می‌کند.
      */
     hide() {
         if (!this.dom.lightbox) return;
         this.dom.lightbox.classList.add('hidden');
-        this.dom.lightboxImage.src = ''; // Clear src to stop loading
+        this.dom.lightboxImage.src = ''; // منبع را پاک کن تا بارگذاری متوقف شود
     }
 }
 

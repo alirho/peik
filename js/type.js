@@ -22,7 +22,7 @@
  * @typedef {object} Chat
  * @property {string} id - شناسه یکتای گپ
  * @property {string} title - عنوان گپ
- * @property {Array<Message>} messages - آرایه‌ای از پیام‌های داخل گپ
+ * @property {Array<Message>} [messages] - آرایه‌ای از پیام‌های داخل گپ (می‌تواند برای بارگذاری درخواستی وجود نداشته باشد)
  * @property {number} createdAt - مهر زمانی ایجاد گپ
  * @property {number} updatedAt - مهر زمانی آخرین به‌روزرسانی گپ
  * @property {string} provider - نام ارائه‌دهنده استفاده شده در گپ
@@ -41,7 +41,8 @@
  * @typedef {object} StorageAdapter
  * @property {function(): Promise<Settings|null>} loadSettings - بارگذاری تنظیمات کاربر
  * @property {function(Settings): Promise<void>} saveSettings - ذخیره تنظیمات کاربر
- * @property {function(): Promise<Array<Chat>>} loadAllChats - بارگذاری تمام گپ‌ها
+ * @property {function(): Promise<Array<Chat>>} loadChatList - فقط لیست گپ‌ها را (بدون پیام‌ها) بارگذاری می‌کند
+ * @property {function(string): Promise<Chat|null>} loadChatById - یک گپ کامل (با پیام‌ها) را با شناسه آن بارگذاری می‌کند
  * @property {function(Chat): Promise<void>} saveChat - ذخیره یا به‌روزرسانی یک گپ
  * @property {function(string): Promise<void>} deleteChatById - حذف یک گپ با شناسه آن
  */

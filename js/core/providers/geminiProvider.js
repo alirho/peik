@@ -1,20 +1,20 @@
 import { fetchStreamWithRetries } from '../../services/apiService.js';
 import { getErrorMessageForStatus } from '../../utils/apiErrors.js';
 
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').ProviderHandler} ProviderHandler */
 
 /**
- * Builds the request body for the Gemini API.
- * @param {Array<import('../../types.js').Message>} history - The chat history.
- * @returns {object} The request body.
+ * بدنه درخواست را برای Gemini API می‌سازد.
+ * @param {Array<import('../../types.js').Message>} history - تاریخچه گفتگو.
+ * @returns {object} بدنه درخواست.
  */
 function buildGeminiRequestBody(history) {
     const contents = history.map(msg => {
         const parts = [];
 
         if (msg.role === 'user') {
-            // Text part should come before image parts for multi-modal models
+            // بخش متنی باید قبل از بخش‌های تصویر برای مدل‌های چندرسانه‌ای بیاید
             if (msg.content) {
                 parts.push({ text: msg.content });
             }
@@ -45,9 +45,9 @@ function buildGeminiRequestBody(history) {
 }
 
 /**
- * Processes a single line from the Gemini SSE stream.
- * @param {string} line - A line from the stream.
- * @param {Function} onChunk - Callback to handle the extracted content.
+ * یک خط از استریم SSE Gemini را پردازش می‌کند.
+ * @param {string} line - یک خط از استریم.
+ * @param {Function} onChunk - Callback برای مدیریت محتوای استخراج‌شده.
  */
 function processGeminiStream(line, onChunk) {
     if (line.startsWith('data: ')) {
@@ -59,15 +59,15 @@ function processGeminiStream(line, onChunk) {
                 if (content) onChunk(content);
             }
         } catch (e) {
-            console.warn("Error parsing Gemini stream chunk:", line, e);
+            console.warn("خطا در تجزیه قطعه استریم Gemini:", line, e);
         }
     }
 }
 
 /**
- * Extracts a detailed error message from a Gemini API response.
- * @param {Response} response - The fetch response object.
- * @returns {Promise<string>} A promise that resolves to the error message.
+ * یک پیام خطای دقیق از پاسخ Gemini API استخراج می‌کند.
+ * @param {Response} response - آبجکت پاسخ fetch.
+ * @returns {Promise<string>} یک Promise که به پیام خطا resolve می‌شود.
  */
 async function getGeminiErrorMessage(response) {
     try {

@@ -6,7 +6,7 @@ import InputManager from './components/inputManager.js';
 import FileManager from './components/fileManager.js';
 import LightboxManager from './components/lightboxManager.js';
 
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../types.js').Settings} Settings */
 /** @typedef {import('../types.js').ImageData} ImageData */
 /** @typedef {import('../core/chatEngine.js').default} ChatEngine */
@@ -23,7 +23,7 @@ class ChatUI {
         this.engine = chatEngine;
         this.rootElement = rootElement;
         
-        // Components will be initialized in init()
+        // کامپوننت‌ها در init() راه‌اندازی خواهند شد
         this.messageRenderer = null;
         this.settingsModal = null;
         this.sidebarManager = null;
@@ -55,7 +55,7 @@ class ChatUI {
             this.bindUIEvents();
         } catch (error) {
             this.rootElement.innerHTML = `<p style="color: red; padding: 1rem;">خطای مهلک: بارگذاری رابط کاربری ناموفق بود. لطفاً صفحه را رفرش کنید.</p>`;
-            console.error('UI Initialization failed:', error);
+            console.error('راه‌اندازی UI ناموفق بود:', error);
         }
     }
 
@@ -88,9 +88,9 @@ class ChatUI {
     }
 
     /**
-     * Checks if the API settings are valid for running the application.
-     * @param {Settings | null} settings - The settings object from storage.
-     * @returns {boolean} True if settings are valid, false otherwise.
+     * بررسی می‌کند که آیا تنظیمات API برای اجرای برنامه معتبر هستند.
+     * @param {Settings | null} settings - آبجکت تنظیمات از حافظه.
+     * @returns {boolean} اگر تنظیمات معتبر باشند true، در غیر این صورت false.
      */
     isSettingsValid(settings) {
         if (!settings || !settings.provider) return false;
@@ -108,7 +108,7 @@ class ChatUI {
                     this.sidebarManager.render(chats, activeChat.id);
                     this.updateChatView(activeChat);
                 } else {
-                    console.warn('Initial active chat was not available. Rendering empty state.');
+                    console.warn('گپ فعال اولیه در دسترس نبود. رندر کردن حالت خالی.');
                     this.sidebarManager.render(chats, null);
                     this.messageRenderer.showWelcomeMessage();
                 }
@@ -156,35 +156,35 @@ class ChatUI {
      * تمام کامپوننت‌های UI و شنوندگان رویداد را برای جلوگیری از نشت حافظه پاک‌سازی می‌کند.
      */
     destroy() {
-        // 1. Remove engine listeners
+        // ۱. حذف شنوندگان موتور
         Object.keys(this.engineListeners).forEach(eventName => {
             this.engine.off(eventName, this.engineListeners[eventName]);
         });
         this.engineListeners = {};
 
-        // 2. Remove UI event listeners
+        // ۲. حذف شنوندگان رویداد UI
         if(this.dom.newChatButton) {
             this.dom.newChatButton.removeEventListener('click', this.handleNewChatClickBound);
         }
 
-        // 3. Destroy all child components
+        // ۳. نابود کردن تمام کامپوننت‌های فرزند
         if (this.lightboxManager) this.lightboxManager.destroy();
         if (this.settingsModal) this.settingsModal.destroy();
         if (this.sidebarManager) this.sidebarManager.destroy();
         if (this.inputManager) this.inputManager.destroy();
         if (this.fileManager) this.fileManager.destroy();
 
-        // 4. Clear root element and DOM references
+        // ۴. پاک کردن المان اصلی و ارجاعات DOM
         this.rootElement.innerHTML = '';
         this.dom = {};
         
-        console.log('ChatUI destroyed.');
+        console.log('ChatUI نابود شد.');
     }
 
     /**
-     * Handles the logic of sending a message, called by the InputManager.
-     * @param {string} userInput - The text from the input field.
-     * @param {ImageData | null} image - The attached image data, if any.
+     * منطق ارسال پیام را مدیریت می‌کند که توسط InputManager فراخوانی می‌شود.
+     * @param {string} userInput - متن از فیلد ورودی.
+     * @param {ImageData | null} image - داده‌های تصویر پیوست شده، در صورت وجود.
      */
     handleSendMessage(userInput, image) {
         if (this.engine.isLoading) {
@@ -198,14 +198,14 @@ class ChatUI {
     }
 
     /**
-     * Updates the main chat view with the content of a given chat.
-     * @param {import('../types.js').Chat} chat - The chat object to display.
+     * نمای اصلی چت را با محتوای یک گپ داده شده به‌روز می‌کند.
+     * @param {import('../types.js').Chat} chat - آبجکت گپی که باید نمایش داده شود.
      */
     updateChatView(chat) {
         if (!chat) return;
         this.inputManager.clearPreview();
         this.dom.mainTitle.textContent = chat.title;
-        if (chat.messages.length > 0) {
+        if (chat.messages && chat.messages.length > 0) {
             this.messageRenderer.renderHistory(chat.messages);
         } else {
             this.messageRenderer.showWelcomeMessage();

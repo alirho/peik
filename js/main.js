@@ -5,26 +5,26 @@ import { streamOpenAIResponse } from './core/providers/openaiProvider.js';
 import { streamCustomResponse } from './core/providers/customProvider.js';
 import { VersionError, StorageSupportError, StorageAccessError } from './utils/customErrors.js';
 
-// --- Storage Implementation ---
-// The ChatEngine is designed to be storage-agnostic. We are injecting
-// the IndexedDB adapter here to provide persistent storage for the web app.
-// Another adapter (e.g., for a file system in Node.js) could be used
-// without changing the core engine. See `docs/storageAdaptorGuide.md`.
+// --- پیاده‌سازی ذخیره‌سازی ---
+// ChatEngine به گونه‌ای طراحی شده که به نوع ذخیره‌سازی وابسته نباشد.
+// ما در اینجا آداپتور IndexedDB را تزریق می‌کنیم تا ذخیره‌سازی پایدار برای برنامه وب فراهم شود.
+// می‌توان از آداپتور دیگری (مثلاً برای فایل سیستم در Node.js) بدون تغییر در هسته اصلی استفاده کرد.
+// برای اطلاعات بیشتر به `docs/storageAdaptorGuide.md` مراجعه کنید.
 import * as IndexedDBStorage from './services/indexedDBStorage.js';
 
 /**
- * Displays a detailed fatal error message to the user, helping them diagnose the issue.
- * @param {HTMLElement} rootElement The element to render the error into.
- * @param {Error} error The error object.
+ * یک پیام خطای مهلک و دقیق به کاربر نمایش می‌دهد تا به او در تشخیص مشکل کمک کند.
+ * @param {HTMLElement} rootElement - المانی که خطا در آن رندر می‌شود.
+ * @param {Error} error - آبجکت خطا.
  */
 function displayFatalError(rootElement, error) {
-    console.error('A fatal error occurred during initialization:', error);
+    console.error('یک خطای مهلک در هنگام راه‌اندازی رخ داد:', error);
 
     let title = 'خطا در بارگذاری برنامه';
     let message = 'متاسفانه مشکلی در هنگام راه‌اندازی برنامه پیش آمده است. لطفاً صفحه را مجدداً بارگیری کنید.';
     let showReloadButton = true;
 
-    // Use instanceof for type-safe error checking
+    // استفاده از instanceof برای بررسی نوع-امن خطا
     if (error instanceof VersionError) {
         title = 'نسخه دیگری از برنامه باز است';
         message = 'به نظر می‌رسد نسخه دیگری از «گوگ» در یک تب دیگر باز است که مانع از بارگذاری این صفحه می‌شود. لطفاً تمام تب‌های دیگر این برنامه را بسته و سپس صفحه را مجدداً بارگیری کنید.';
@@ -43,7 +43,7 @@ function displayFatalError(rootElement, error) {
            </div>`
         : '';
         
-    // Center the error container vertically and horizontally
+    // مرکز کردن کانتینر خطا به صورت افقی و عمودی
     rootElement.style.display = 'flex';
     rootElement.style.alignItems = 'center';
     rootElement.style.justifyContent = 'center';
@@ -68,18 +68,18 @@ function displayFatalError(rootElement, error) {
 }
 
 /**
- * Initializes the application when the DOM is fully loaded.
+ * برنامه را هنگام بارگذاری کامل DOM راه‌اندازی می‌کند.
  */
 document.addEventListener('DOMContentLoaded', async () => {
     const rootElement = document.getElementById('root');
     if (!rootElement) {
-        console.error('Fatal Error: Root element #root not found.');
+        console.error('خطای مهلک: المان اصلی برنامه #root یافت نشد.');
         document.body.innerHTML = '<p style="color: red; padding: 1rem; text-align: center;">خطای مهلک: المان اصلی برنامه یافت نشد.</p>';
         return;
     }
 
     try {
-        // Instantiate the core logic with injected storage and providers
+        // نمونه‌سازی از منطق اصلی با تزریق ذخیره‌سازی و ارائه‌دهندگان
         const chatEngine = new ChatEngine({
             storage: IndexedDBStorage,
             providers: {
@@ -90,11 +90,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         const chatUI = new ChatUI(chatEngine, rootElement);
 
-        // Ensure the UI is fully initialized before the engine starts emitting events
+        // اطمینان از راه‌اندازی کامل UI قبل از اینکه موتور شروع به انتشار رویدادها کند
         await chatUI.init();
         await chatEngine.init();
 
-        // Add cleanup logic for when the user leaves the page
+        // افزودن منطق پاک‌سازی برای زمانی که کاربر صفحه را ترک می‌کند
         window.addEventListener('beforeunload', () => {
             if (chatUI) chatUI.destroy();
             if (chatEngine) chatEngine.destroy();

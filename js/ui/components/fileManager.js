@@ -1,14 +1,14 @@
-// JSDoc Type Imports
+// وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').ImageData} ImageData */
 /** @typedef {import('../../core/chatEngine.js').default} ChatEngine */
 
 /**
- * Handles file selection, validation, reading, and compression logic.
+ * منطق انتخاب فایل، اعتبارسنجی، خواندن و فشرده‌سازی را مدیریت می‌کند.
  */
 class FileManager {
     /**
-     * @param {ChatEngine} engine - The chat engine instance to emit errors.
-     * @param {function(ImageData): void} onFileProcessed - Callback function executed with the processed image data.
+     * @param {ChatEngine} engine - نمونه موتور چت برای انتشار خطاها.
+     * @param {function(ImageData): void} onFileProcessed - تابع callback که با داده‌های تصویر پردازش‌شده اجرا می‌شود.
      */
     constructor(engine, onFileProcessed) {
         this.engine = engine;
@@ -26,7 +26,7 @@ class FileManager {
     }
     
     /**
-     * Programmatically triggers the file input dialog.
+     * به صورت برنامه‌ریزی شده، پنجره انتخاب فایل را باز می‌کند.
      */
     trigger() {
         if (this.fileInput) {
@@ -35,8 +35,8 @@ class FileManager {
     }
 
     /**
-     * Handles the file selection event from the input element.
-     * @param {Event} event - The file input change event.
+     * رویداد انتخاب فایل از المان ورودی را مدیریت می‌کند.
+     * @param {Event} event - رویداد change ورودی فایل.
      */
     handleFileSelect(event) {
         const file = event.target.files[0];
@@ -44,7 +44,7 @@ class FileManager {
     
         const limits = this.engine.limits;
         
-        // Reset input value to allow selecting the same file again
+        // مقدار ورودی را ریست کن تا انتخاب مجدد همان فایل ممکن باشد
         this.fileInput.value = '';
     
         const extension = (file.name.split('.').pop() || '').toLowerCase();
@@ -64,7 +64,7 @@ class FileManager {
         const reader = new FileReader();
         reader.onload = (e) => {
             const dataUrl = e.target.result;
-            // Compress if it's not a GIF and compression is not disabled via unlimited preset
+            // اگر فایل GIF نباشد و فشرده‌سازی غیرفعال نشده باشد، فشرده‌سازی کن
             const shouldCompress = file.type !== 'image/gif' && limits.file.maxCompressedSizeBytes !== Infinity;
 
             if (shouldCompress) {
@@ -87,10 +87,10 @@ class FileManager {
     }
 
     /**
-     * Compresses an image by resizing and re-encoding it, with validation.
-     * @param {string} dataUrl - The Base64 data URL of the image.
-     * @param {string} originalMimeType - The original MIME type of the image.
-     * @param {function(ImageData | null): void} callback - A function called with the compression result or null on error.
+     * یک تصویر را با تغییر اندازه و رمزگذاری مجدد، فشرده می‌کند و اعتبارسنجی می‌کند.
+     * @param {string} dataUrl - داده URL Base64 تصویر.
+     * @param {string} originalMimeType - نوع MIME اصلی تصویر.
+     * @param {function(ImageData | null): void} callback - تابعی که با نتیجه فشرده‌سازی یا null در صورت خطا فراخوانی می‌شود.
      */
     compressImage(dataUrl, originalMimeType, callback) {
         const limits = this.engine.limits;
@@ -101,13 +101,13 @@ class FileManager {
         const cleanup = () => {
             img.onload = null;
             img.onerror = null;
-            img.src = ''; // Detach source to free memory
+            img.src = ''; // منبع را جدا کن تا حافظه آزاد شود
             canvas.width = 1;
-            canvas.height = 1; // Clear canvas context
+            canvas.height = 1; // زمینه canvas را پاک کن
         };
 
         img.onload = () => {
-            // Validate original dimensions and aspect ratio
+            // اعتبارسنجی ابعاد و نسبت ابعاد اصلی
             if (limits.image.maxOriginalDimension !== Infinity && (img.width > limits.image.maxOriginalDimension || img.height > limits.image.maxOriginalDimension)) {
                 this.engine.emit('error', `ابعاد تصویر (${img.width}x${img.height}) نباید از ${limits.image.maxOriginalDimension} پیکسل بیشتر باشد.`);
                 cleanup();
@@ -122,7 +122,7 @@ class FileManager {
 
             let { width, height } = img;
     
-            // Resize if needed
+            // در صورت نیاز تغییر اندازه بده
             if (limits.image.maxFinalDimension !== Infinity && (width > limits.image.maxFinalDimension || height > limits.image.maxFinalDimension)) {
                 if (width > height) {
                     height = Math.round((height * limits.image.maxFinalDimension) / width);
@@ -141,7 +141,7 @@ class FileManager {
             const compressedDataUrl = canvas.toDataURL(outputMimeType, limits.image.compressionQuality);
             const base64Data = compressedDataUrl.split(',')[1];
             
-            // Validate compressed size (approximate)
+            // اعتبارسنجی حجم فشرده‌شده (تقریبی)
             const compressedSizeBytes = base64Data.length * (3 / 4);
             if (limits.file.maxCompressedSizeBytes !== Infinity && compressedSizeBytes > limits.file.maxCompressedSizeBytes) {
                 this.engine.emit('error', `حجم فایل فشرده شده (${(compressedSizeBytes / 1024 / 1024).toFixed(1)}MB) بیشتر از حد مجاز است.`);
