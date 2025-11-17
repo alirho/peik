@@ -967,3 +967,34 @@ Object { id: "chat_1763299283560", title: "گپ جدید", messages: [], created
 
 ### پرامپت ۸۱
 اگر سندی نیاز به بروزرسانی داره، بروزش کن.
+
+### پرامپت ۸۲
+در حال حاضر، کتابخانه `markdown-it.min.js` که حجم نسبتاً زیادی داره، همون اول بارگذاری برنامه دانلود می‌شه. این موضوع باعث کند شدن بارگذاری اولیه صفحه می‌شه، در حالی که ما فقط زمانی به این کتابخانه نیاز داریم که پاسخی از هوی مصنوعی دریافت بشه.
+
+می‌خواهم بارگذاری کتابخانه `markdown-it` به صورت "تنبل" (Lazy Loading) انجام بشه.
+- به محض دریافت **نخستین پاسخ از هوش مصنوعی**، کتابخانه باید به صورت پویا (dynamic import) در پس‌زمینه بارگذاری بشه.
+- تا زمانی که کتابخانه در حال بارگذاریه، پاسخ هوش مصنوعی می‌تونه به صورت متن ساده نمایش داده بشه و پس از آماده شدن کتابخانه، به درستی رندر بشه.
+- بعد از نخستین بار، کتابخانه رو cache کن تا دوباره بارگذاری نشه
+
+### پرامپت ۸۳
+پیام‌ها مدل هوش به صورت خام نمایش داده می‌شن و به صورت مارک‌داون رندر نمی‌شن.
+
+### پرامپت ۸۴
+مشکل رفع نشد و در کنسول مرورگر خطای زیر نمایش داده می‌شه:
+
+```js
+Failed to load markdown-it library: TypeError: MarkdownIt is not a constructor
+    loadingPromise http://localhost:3000/js/services/markdownService.js:38
+    promise callback*load http://localhost:3000/js/services/markdownService.js:35
+    _ensureMarkdownIsLoadedAndRerender http://localhost:3000/js/ui/components/messageRenderer.js:378
+    appendMessage http://localhost:3000/js/ui/components/messageRenderer.js:104
+    renderHistory http://localhost:3000/js/ui/components/messageRenderer.js:27
+    renderHistory http://localhost:3000/js/ui/components/messageRenderer.js:27
+    updateChatView http://localhost:3000/js/ui/chatUI.js:209
+    init http://localhost:3000/js/ui/chatUI.js:109
+    emit http://localhost:3000/js/core/eventEmitter.js:45
+    emit http://localhost:3000/js/core/eventEmitter.js:43
+    init http://localhost:3000/js/core/chatEngine.js:172
+    async* http://localhost:3000/js/main.js:39
+    async* http://localhost:3000/js/main.js:17
+```

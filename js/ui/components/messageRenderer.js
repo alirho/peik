@@ -95,8 +95,14 @@ class MessageRenderer {
                 bubble.innerHTML = this.createTypingIndicator();
                 bubble.dataset.rawContent = '';
             } else {
-                bubble.innerHTML = markdownService.render(message.content);
-                bubble.dataset.rawContent = message.content;
+                const content = message.content;
+                bubble.dataset.rawContent = content;
+                // Render with markdown if available, otherwise render plain text and mark for re-render
+                bubble.innerHTML = markdownService.render(content);
+                if (!markdownService.isLoaded()) {
+                    bubble.dataset.needsMarkdown = 'true';
+                    this._ensureMarkdownIsLoadedAndRerender();
+                }
             }
         }
 
@@ -120,7 +126,13 @@ class MessageRenderer {
         const currentContent = bubbleElement.dataset.rawContent || '';
         const newContent = currentContent + chunk;
         bubbleElement.dataset.rawContent = newContent;
+        
+        // Render with markdown if available, otherwise plain text and trigger load.
         bubbleElement.innerHTML = markdownService.render(newContent);
+        if (!markdownService.isLoaded()) {
+            bubbleElement.dataset.needsMarkdown = 'true';
+            this._ensureMarkdownIsLoadedAndRerender();
+        }
         
         this.scrollToBottom();
     }
@@ -188,10 +200,18 @@ class MessageRenderer {
             role: 'assistant',
             content: welcomeText,
         });
-        bubble.innerHTML = markdownService.render(welcomeText);
-
-        this.container.innerHTML = '';
+        
+        this.clearMessages();
         this.container.appendChild(element);
+
+        bubble.dataset.rawContent = welcomeText;
+        bubble.innerHTML = markdownService.render(welcomeText);
+        // If markdown-it isn't loaded yet, this will render as plain text.
+        // We'll mark it for re-rendering when the library becomes available.
+        if (!markdownService.isLoaded()) {
+            bubble.dataset.needsMarkdown = 'true';
+            this._ensureMarkdownIsLoadedAndRerender();
+        }
     }
 
     /**
@@ -306,6 +326,58 @@ class MessageRenderer {
             console.error('Failed to copy text: ', err);
             button.title = 'رونوشت ناموفق بود';
             setTimeout(() => { button.title = 'رونوشت'; }, 2000);
+        }
+    }
+
+    /**
+     * Finds all messages that were rendered as plain text and re-renders them
+     * with the fully loaded markdown parser.
+     */
+    rerenderUnprocessedMessages() {
+        if (!markdownService.isLoaded()) return;
+
+        const messagesToUpdate = this.container.querySelectorAll('[data-needs-markdown="true"]');
+        if (messagesToUpdate.length === 0) return;
+
+        const wasScrolledToBottom = this.isScrolledToBottom();
+
+        messagesToUpdate.forEach(bubble => {
+            const rawContent = bubble.dataset.rawContent;
+            if (rawContent) {
+                bubble.innerHTML = markdownService.render(rawContent);
+                delete bubble.dataset.needsMarkdown;
+            }
+        });
+
+        // If the user was at the bottom of the chat, keep them there after re-render.
+        if (wasScrolledToBottom) {
+            this.scrollToBottom();
+        }
+    }
+
+    /**
+     * Checks if the user is scrolled to the bottom of the chat area.
+     * @returns {boolean}
+     */
+    isScrolledToBottom() {
+        const chatArea = this.container.parentElement;
+        if (!chatArea) return false;
+        // A threshold of a few pixels to account for rounding errors.
+        const threshold = 10; 
+        return chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < threshold;
+    }
+
+    /**
+     * Ensures the markdown library is loaded if needed, and schedules a re-render.
+     * @private
+     */
+    _ensureMarkdownIsLoadedAndRerender() {
+        if (!markdownService.isLoaded()) {
+            // The load function is idempotent, so it's safe to call multiple times.
+            // It will only trigger the import once.
+            markdownService.load().then(() => {
+                this.rerenderUnprocessedMessages();
+            });
         }
     }
 }
