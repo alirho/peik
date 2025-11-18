@@ -384,6 +384,12 @@ class SettingsModal {
     // --- توابع کمکی برای مودال تأیید ---
 
     _handleConfirm() {
+        // فقط در صورتی این رویداد را مدیریت کن که خود مودال تنظیمات قابل مشاهده باشد.
+        // این کار از تداخل با مودال تأییدی که توسط سایدبار باز می‌شود، جلوگیری می‌کند.
+        if (this.modal && this.modal.classList.contains('hidden')) {
+            return;
+        }
+
         if (this.confirmHandler) {
             this.confirmHandler();
         }

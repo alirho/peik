@@ -1091,3 +1091,15 @@ Failed to load markdown-it library: TypeError: MarkdownIt is not a constructor
 
 ### پرامپت ۹۷
 خب با توجه تغییرهایی که دادی سندها را بروزرسانی کن.
+
+### پرامپت ۹۸
+زمانیکه می‌خوام نام یک گپ را ویرایش کنم با خطای زیر در کنسول مرورگر نمایش داده می‌شه:
+
+```js
+Uncaught TypeError: can't access property "value", input is null
+    onConfirm http://127.0.0.1:3000/js/ui/components/sidebarManager.js:180
+    _handleConfirm http://127.0.0.1:3000/js/ui/components/sidebarManager.js:233
+sidebarManager.js:180:34
+    onConfirm http://127.0.0.1:3000/js/ui/components/sidebarManager.js:180
+    _handleConfirm http://127.0.0.1:3000/js/ui/components/sidebarManager.js:233
+```
