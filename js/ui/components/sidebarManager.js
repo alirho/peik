@@ -80,14 +80,27 @@ class SidebarManager {
             item.classList.add('active');
         }
 
-        const providerType = chat.providerConfig?.provider || 'custom';
+        const modelInfo = chat.modelInfo;
+        const providerType = modelInfo?.provider || 'custom';
+        // بررسی اینکه آیا مدل گپ هنوز در تنظیمات موجود است یا خیر
+        const isModelValid = !!this.engine.resolveProviderConfig(modelInfo);
+        
         // افزودن آیکون ارائه‌دهنده
         const icon = document.createElement('span');
         icon.className = 'material-symbols-outlined provider-icon';
         icon.textContent = this._getProviderIconName(providerType);
-        icon.title = chat.providerConfig?.name || providerType;
-        icon.dataset.provider = providerType; // برای استایل‌دهی رنگی
+        icon.title = modelInfo?.displayName || providerType;
+        icon.dataset.provider = providerType;
         item.appendChild(icon);
+
+        // اگر مدل نامعتبر است، یک آیکون هشدار اضافه کن
+        if (!isModelValid) {
+            const warningBadge = document.createElement('span');
+            warningBadge.className = 'chat-item-warning';
+            warningBadge.textContent = '⚠️';
+            warningBadge.title = 'مدل این گپ در تنظیمات موجود نیست';
+            item.appendChild(warningBadge);
+        }
 
         const title = document.createElement('span');
         title.className = 'chat-title';

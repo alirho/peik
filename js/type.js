@@ -19,13 +19,22 @@
  */
 
 /**
+ * @typedef {object} ChatModelInfo
+ * @property {'gemini' | 'openai' | 'custom'} provider - نوع ارائه‌دهنده
+ * @property {string} [customProviderId] - شناسه یکتای پیکربندی ارائه‌دهنده سفارشی، در صورت وجود
+ * @property {string} displayName - نام نمایشی برای ارائه‌دهنده (مثلاً "Gemini", "Ollama Llama3")
+ * @property {string} modelName - نام مدل خاص (مثلاً "gemini-2.5-flash")
+ */
+
+/**
  * @typedef {object} Chat
  * @property {string} id - شناسه یکتای گپ
  * @property {string} title - عنوان گپ
  * @property {Array<Message>} [messages] - آرایه‌ای از پیام‌های داخل گپ (می‌تواند برای بارگذاری درخواستی وجود نداشته باشد)
  * @property {number} createdAt - مهر زمانی ایجاد گپ
  * @property {number} updatedAt - مهر زمانی آخرین به‌روزرسانی گپ
- * @property {ProviderConfig} providerConfig - پیکربندی ارائه‌دهنده برای این گپ
+ * @property {ChatModelInfo} modelInfo - مرجعی به مدل استفاده شده توسط این گپ
+ * @property {ProviderConfig} [providerConfig] - **منسوخ شده**: برای اهداف مهاجرت داده‌های قدیمی نگهداری شده است.
  */
 
 /**

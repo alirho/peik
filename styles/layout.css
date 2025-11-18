@@ -104,6 +104,19 @@ html.dark .model-selector-item:hover {
 html.dark .model-selector-item.active {
     background-color: var(--surface-dark-lighter);
 }
+/* Styles for invalid/deleted model in dropdown */
+.model-selector-item.invalid {
+    opacity: 0.7;
+    cursor: help;
+    background-color: transparent !important;
+}
+.model-selector-item.invalid .model-item-name {
+    color: #f87171; /* A light red for warning */
+}
+html.dark .model-selector-item.invalid .model-item-name {
+    color: #ef4444;
+}
+
 .model-item-info {
     display: flex;
     align-items: center;

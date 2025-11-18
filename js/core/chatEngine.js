@@ -9,6 +9,7 @@ import { DEFAULT_LIMITS, PRESET_LIMITS } from '../utils/constants.js';
 /** @typedef {import('../types.js').Settings} Settings */
 /** @typedef {import('../types.js').Chat} Chat */
 /** @typedef {import('../types.js').ImageData} ImageData */
+/** @typedef {import('../types.js').ChatModelInfo} ChatModelInfo */
 /** @typedef {import('../types.js').ProviderConfig} ProviderConfig */
 /** @typedef {import('../types.js').StorageAdapter} StorageAdapter */
 /** @typedef {import('../types.js').ProviderHandler} ProviderHandler */
@@ -194,9 +195,10 @@ class ChatEngine extends EventEmitter {
 
             let loadedChatList = await this.storage.loadChatList();
             
-            this.chats = loadedChatList.filter(chat => 
-                chat && typeof chat.id === 'string' && typeof chat.updatedAt === 'number'
-            );
+            // داده‌های قدیمی را به فرمت جدید مبتنی بر مرجع مهاجرت بده
+            this.chats = loadedChatList
+                .filter(chat => chat && typeof chat.id === 'string' && typeof chat.updatedAt === 'number')
+                .map(chat => this._migrateChatFormat(chat));
             
             let activeChat;
             if (this.chats.length === 0) {
@@ -209,9 +211,10 @@ class ChatEngine extends EventEmitter {
                 // بارگذاری پیام‌های گپ فعال برای نمایش اولیه
                 const fullActiveChat = await this.storage.loadChatById(this.activeChatId);
                 if (fullActiveChat) {
+                    const migratedChat = this._migrateChatFormat(fullActiveChat);
                     const index = this.chats.findIndex(c => c.id === this.activeChatId);
-                    if (index !== -1) this.chats[index] = fullActiveChat;
-                    activeChat = fullActiveChat;
+                    if (index !== -1) this.chats[index] = migratedChat;
+                    activeChat = migratedChat;
                 } else {
                     // اگر گپ فعال یافت نشد (مثلاً به دلیل خرابی داده)، یک گپ جدید ایجاد کن
                     console.error(`گپ فعال با شناسه ${this.activeChatId} یافت نشد. یک گپ جدید ایجاد می‌شود.`);
@@ -235,6 +238,61 @@ class ChatEngine extends EventEmitter {
             // پرتاب مجدد خطا تا در لایه بالاتر مدیریت شود
             throw error;
         }
+    }
+    
+    /**
+     * یک آبجکت گپ را از فرمت قدیمی (با providerConfig کامل) به فرمت جدید (با modelInfo) تبدیل می‌کند.
+     * اگر گپ از قبل در فرمت جدید باشد، تغییری نمی‌دهد.
+     * @param {Chat} chat - آبجکت گپ برای مهاجرت.
+     * @returns {Chat} - آبجکت گپ مهاجرت‌داده‌شده.
+     * @private
+     */
+    _migrateChatFormat(chat) {
+        if (chat && chat.providerConfig && !chat.modelInfo) {
+            const config = chat.providerConfig;
+            chat.modelInfo = {
+                provider: config.provider,
+                customProviderId: config.customProviderId,
+                displayName: config.name || (config.provider === 'gemini' ? 'Gemini' : config.provider === 'openai' ? 'ChatGPT' : 'سفارشی'),
+                modelName: config.modelName,
+            };
+            // حذف اطلاعات حساس و تکراری
+            delete chat.providerConfig;
+        }
+        return chat;
+    }
+    
+    /**
+     * پیکربندی کامل یک ارائه‌دهنده را بر اساس مرجع مدل (`modelInfo`) پیدا می‌کند.
+     * این متد مرکزی برای ترجمه مرجع به پیکربندی واقعی است.
+     * @param {ChatModelInfo} modelInfo - مرجع مدل از یک آبجکت گپ.
+     * @returns {ProviderConfig | null} پیکربندی کامل، یا null در صورت عدم وجود.
+     */
+    resolveProviderConfig(modelInfo) {
+        if (!modelInfo || !this.settings || !this.settings.providers) {
+            return null;
+        }
+
+        const { provider, customProviderId } = modelInfo;
+
+        if (provider === 'custom') {
+            // پیدا کردن پیکربندی سفارشی بر اساس شناسه منحصر به فرد آن
+            const config = this.settings.providers.custom?.find(p => p.id === customProviderId);
+            if (config) {
+                return { provider: 'custom', customProviderId: config.id, ...config };
+            }
+        } else if (provider === 'gemini' || provider === 'openai') {
+            const config = this.settings.providers[provider];
+            // بررسی اینکه آیا یک پیکربندی معتبر (با کلید API) برای این نوع وجود دارد یا خیر
+            if (config && config.apiKey && config.modelName) {
+                const name = provider === 'gemini' ? 'Gemini' : 'ChatGPT';
+                // مقایسه نام مدل برای اطمینان از اینکه همان مدل است
+                if (config.modelName === modelInfo.modelName) {
+                    return { provider, name, ...config };
+                }
+            }
+        }
+        return null;
     }
 
     /**

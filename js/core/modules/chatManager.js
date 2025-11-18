@@ -1,6 +1,7 @@
 // وارد کردن تایپ‌ها برای JSDoc
 /** @typedef {import('../../types.js').Chat} Chat */
 /** @typedef {import('../../types.js').ProviderConfig} ProviderConfig */
+/** @typedef {import('../../types.js').ChatModelInfo} ChatModelInfo */
 /** @typedef {import('../chatEngine.js').default} ChatEngine */
 
 /**
@@ -16,12 +17,12 @@ class ChatManager {
     }
 
     /**
-     * پیکربندی ارائه‌دهنده فعال را برای گپ‌های جدید تعیین می‌کند.
+     * مرجع مدل پیش‌فرض را برای گپ‌های جدید تعیین می‌کند.
      * اولویت با تنظیمات فعال کاربر است، سپس به پیکربندی پیش‌فرض از config.json بازمی‌گردد.
-     * @returns {ProviderConfig | null}
+     * @returns {ChatModelInfo | null}
      * @private
      */
-    _getDefaultProviderConfig() {
+    _getDefaultModelInfo() {
         const settings = this.engine.settings;
         
         // اولویت ۱: تنظیمات فعال کاربر
@@ -30,32 +31,31 @@ class ChatManager {
             const providers = settings.providers;
             
             if (id === 'gemini') {
-                return { provider: 'gemini', ...providers.gemini, name: 'Gemini' };
+                return { provider: 'gemini', displayName: 'Gemini', modelName: providers.gemini.modelName };
             }
             if (id === 'openai') {
-                return { provider: 'openai', ...providers.openai, name: 'ChatGPT' };
+                return { provider: 'openai', displayName: 'ChatGPT', modelName: providers.openai.modelName };
             }
             const customConfig = providers.custom.find(p => p.id === id);
             if (customConfig) {
-                // یک کپی تمیز برای جلوگیری از جهش ایجاد کن
                 return {
                     provider: 'custom',
-                    name: customConfig.name,
-                    modelName: customConfig.modelName,
-                    apiKey: customConfig.apiKey,
-                    endpointUrl: customConfig.endpointUrl,
                     customProviderId: customConfig.id,
+                    displayName: customConfig.name,
+                    modelName: customConfig.modelName,
                 };
             }
         }
         
         // اولویت ۲: ارائه‌دهنده پیش‌فرض از config.json
         if (this.engine.defaultProvider) {
-            // ساختار defaultProvider را اعتبارسنجی ساده کن
-            const { provider, modelName, apiKey } = this.engine.defaultProvider;
-            if (provider && modelName && apiKey) {
-                return this.engine.defaultProvider;
-            }
+            const config = this.engine.defaultProvider;
+            return {
+                provider: config.provider,
+                customProviderId: config.customProviderId,
+                displayName: config.name || config.provider,
+                modelName: config.modelName,
+            };
         }
 
         return null;
@@ -76,8 +76,8 @@ class ChatManager {
             return;
         }
         
-        const defaultConfig = this._getDefaultProviderConfig();
-        if (!defaultConfig && this.engine.chats.length === 0) {
+        const defaultModelInfo = this._getDefaultModelInfo();
+        if (!defaultModelInfo && this.engine.chats.length === 0) {
             // اگر هیچ گپی وجود نداشته باشد و هیچ پیکربندی معتبری هم نباشد، کاری انجام نده.
             // UI باید مودال تنظیمات را نشان دهد.
             return;
@@ -90,7 +90,7 @@ class ChatManager {
             messages: [], // گپ جدید با پیام‌های خالی شروع می‌شود (از قبل بارگذاری شده).
             createdAt: now,
             updatedAt: now,
-            providerConfig: defaultConfig || { provider: 'unknown', modelName: 'unknown' }
+            modelInfo: defaultModelInfo || { provider: 'unknown', displayName: 'نامشخص', modelName: 'unknown' }
         };
 
         this.engine.chats.push(newChat);
@@ -134,8 +134,10 @@ class ChatManager {
             try {
                 const fullChat = await this.engine.storage.loadChatById(chatId);
                 if (fullChat) {
-                    this.engine.chats[chatIndex] = fullChat; // جایگزینی گپ ناقص با گپ کامل
-                    chatToActivate = fullChat;
+                    // مهاجرت داده‌های قدیمی به فرمت جدید در صورت نیاز
+                    const migratedChat = this.engine._migrateChatFormat(fullChat);
+                    this.engine.chats[chatIndex] = migratedChat; // جایگزینی گپ ناقص با گپ کامل
+                    chatToActivate = migratedChat;
                 } else {
                     throw new Error(`گپ ${chatId} در حافظه یافت نشد.`);
                 }
@@ -153,16 +155,26 @@ class ChatManager {
     }
 
     /**
-     * پیکربندی مدل برای یک گپ خاص را به‌روزرسانی می‌کند.
+     * مرجع مدل برای یک گپ خاص را به‌روزرسانی می‌کند.
      * @param {string} chatId - شناسه گپ برای به‌روزرسانی.
-     * @param {ProviderConfig} providerConfig - پیکربندی جدید ارائه‌دهنده.
+     * @param {ProviderConfig} providerConfig - پیکربندی کامل ارائه‌دهنده که از UI می‌آید.
      * @returns {Promise<void>}
      */
     async updateChatModel(chatId, providerConfig) {
         const chat = this.engine.chats.find(c => c.id === chatId);
         if (chat) {
-            chat.providerConfig = providerConfig;
+            // تبدیل پیکربندی کامل به یک مرجع (modelInfo) برای ذخیره‌سازی
+            chat.modelInfo = {
+                provider: providerConfig.provider,
+                customProviderId: providerConfig.customProviderId,
+                displayName: providerConfig.name,
+                modelName: providerConfig.modelName,
+            };
             chat.updatedAt = Date.now();
+            
+            // حذف فیلد منسوخ شده قبل از ذخیره برای اطمینان از پاکسازی
+            delete chat.providerConfig;
+
             await this.engine.storageManager.save(chat);
             this.engine.syncManager.broadcastUpdate();
             // به UI اطلاع بده که گپ فعال تغییر کرده تا هدر و سایر بخش‌ها به‌روز شوند

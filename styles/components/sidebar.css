@@ -81,7 +81,7 @@ html.dark .chat-list-item.active {
     flex-shrink: 0;
 }
 
-/* Colored Provider Icons - Overwrites generic colors */
+/* Colored Provider Icons */
 .provider-icon[data-provider="gemini"] { color: #4285F4 !important; }
 .provider-icon[data-provider="openai"] { color: #10a37f !important; }
 .provider-icon[data-provider="custom"] { color: #94a3b8 !important; }
@@ -94,6 +94,17 @@ html.dark .chat-list-item.active .chat-title {
     color: var(--text-dark);
 }
 
+/* Warning badge for invalid models */
+.chat-item-warning {
+    font-size: 0.75rem;
+    line-height: 1;
+    flex-shrink: 0;
+    cursor: help;
+    color: #f87171; /* Light red for warning */
+}
+html.dark .chat-item-warning {
+    color: #ef4444;
+}
 
 .chat-title {
     flex-grow: 1;

@@ -10,6 +10,7 @@ import LightboxManager from './components/lightboxManager.js';
 /** @typedef {import('../types.js').Settings} Settings */
 /** @typedef {import('../types.js').ImageData} ImageData */
 /** @typedef {import('../types.js').ProviderConfig} ProviderConfig */
+/** @typedef {import('../types.js').ChatModelInfo} ChatModelInfo */
 /** @typedef {import('../core/chatEngine.js').default} ChatEngine */
 
 /**
@@ -160,7 +161,7 @@ class ChatUI {
         });
         this.dom.modelSelectorDropdown.addEventListener('click', (e) => {
             const item = e.target.closest('.model-selector-item');
-            if (item) {
+            if (item && !item.classList.contains('invalid')) {
                 const config = JSON.parse(item.dataset.config);
                 const activeChat = this.engine.getActiveChat();
                 if (activeChat) {
@@ -225,17 +226,24 @@ class ChatUI {
      * @param {import('../types.js').Chat} chat 
      */
     renderModelSelector(chat) {
-        if (!chat || !chat.providerConfig) {
+        if (!chat || !chat.modelInfo) {
             this.dom.modelSelector.classList.add('hidden');
             return;
         }
 
-        const config = chat.providerConfig;
-        const displayName = config.name || (config.provider === 'gemini' ? 'Gemini' : config.provider === 'openai' ? 'ChatGPT' : 'سفارشی');
+        const modelInfo = chat.modelInfo;
+        const isModelValid = !!this.engine.resolveProviderConfig(modelInfo);
         
-        this.dom.modelSelectorName.textContent = `${displayName}: ${config.modelName}`;
-        this.dom.modelSelectorIcon.textContent = this._getProviderIconName(config.provider);
-        this.dom.modelSelectorIcon.dataset.provider = config.provider;
+        const displayName = modelInfo.displayName || (modelInfo.provider === 'gemini' ? 'Gemini' : modelInfo.provider === 'openai' ? 'ChatGPT' : 'سفارشی');
+        
+        let buttonText = `${displayName}: ${modelInfo.modelName}`;
+        if (!isModelValid) {
+            buttonText = `⚠️ ${buttonText}`;
+        }
+        
+        this.dom.modelSelectorName.textContent = buttonText;
+        this.dom.modelSelectorIcon.textContent = this._getProviderIconName(modelInfo.provider);
+        this.dom.modelSelectorIcon.dataset.provider = modelInfo.provider;
         
         this._populateModelDropdown(chat);
         this.dom.modelSelector.classList.remove('hidden');
@@ -248,20 +256,42 @@ class ChatUI {
     _populateModelDropdown(activeChat) {
         const dropdown = this.dom.modelSelectorDropdown;
         dropdown.innerHTML = '';
+        
         const availableModels = this._getAllAvailableModels();
-        const activeConfig = activeChat.providerConfig;
+        const activeModelInfo = activeChat.modelInfo;
+        const isCurrentModelValid = !!this.engine.resolveProviderConfig(activeModelInfo);
+
+        // اگر مدل فعلی گپ دیگر در تنظیمات موجود نیست، آن را به عنوان یک آیتم نامعتبر در بالای لیست نمایش بده
+        if (!isCurrentModelValid && activeModelInfo) {
+            const item = document.createElement('div');
+            item.className = 'model-selector-item invalid';
+            item.title = 'این مدل دیگر موجود نیست';
+            
+            const displayName = activeModelInfo.displayName || 'مدل حذف شده';
+
+            item.innerHTML = `
+                <div class="model-item-info">
+                    <span class="material-symbols-outlined provider-icon" data-provider="${activeModelInfo.provider}">${this._getProviderIconName(activeModelInfo.provider)}</span>
+                    <span class="model-item-name">⚠️ ${displayName}: ${activeModelInfo.modelName}</span>
+                </div>
+            `;
+            dropdown.appendChild(item);
+        }
 
         availableModels.forEach(modelConfig => {
             const item = document.createElement('div');
             item.className = 'model-selector-item';
+            // ذخیره پیکربندی کامل برای استفاده در هنگام به‌روزرسانی
             item.dataset.config = JSON.stringify(modelConfig);
             
-            // بررسی اینکه آیا این مدل، مدل فعال گپ است یا خیر
             let isActive = false;
-            if (activeConfig.provider === 'custom' && modelConfig.provider === 'custom') {
-                isActive = activeConfig.customProviderId === modelConfig.customProviderId;
-            } else {
-                isActive = activeConfig.provider === modelConfig.provider;
+            if (activeModelInfo) {
+                if (modelConfig.provider === 'custom' && activeModelInfo.provider === 'custom') {
+                    isActive = modelConfig.customProviderId === activeModelInfo.customProviderId;
+                } else if (modelConfig.provider !== 'custom' && activeModelInfo.provider !== 'custom') {
+                    // برای مدل‌های داخلی، مقایسه نوع و نام مدل
+                    isActive = (modelConfig.provider === activeModelInfo.provider) && (modelConfig.modelName === activeModelInfo.modelName);
+                }
             }
 
             if (isActive) {
@@ -287,40 +317,45 @@ class ChatUI {
      */
     _getAllAvailableModels() {
         const models = [];
-        const addedProviders = new Set(); // برای جلوگیری از افزودن تکراری
-        
-        const processProvider = (config, type, name, id) => {
-            if (config && config.modelName && config.apiKey) {
-                const key = type === 'custom' ? id : type;
-                if (!addedProviders.has(key)) {
-                    models.push({
-                        provider: type,
-                        name: name,
-                        modelName: config.modelName,
-                        apiKey: config.apiKey,
-                        ...(type === 'custom' && { endpointUrl: config.endpointUrl, customProviderId: id })
-                    });
-                    addedProviders.add(key);
-                }
-            }
-        };
-
         const settings = this.engine.settings;
-        if (settings && settings.providers) {
-            processProvider(settings.providers.gemini, 'gemini', 'Gemini');
-            processProvider(settings.providers.openai, 'openai', 'ChatGPT');
-            settings.providers.custom?.forEach(p => {
-                if (p.endpointUrl) { // اعتبار سنجی اولیه برای مدل های سفارشی
-                    processProvider(p, 'custom', p.name, p.id);
-                }
+        
+        if (!settings || !settings.providers) return models;
+
+        // Gemini
+        const geminiConfig = settings.providers.gemini;
+        if (geminiConfig && geminiConfig.apiKey && geminiConfig.modelName) {
+            models.push({
+                provider: 'gemini',
+                name: 'Gemini',
+                modelName: geminiConfig.modelName,
+                apiKey: geminiConfig.apiKey
             });
         }
         
-        // مدل پیش‌فرض از config.json را نیز اضافه کن، اگر قبلاً توسط کاربر پیکربندی نشده باشد
-        const defaultConfig = this.engine.defaultProvider;
-        if (defaultConfig) {
-            processProvider(defaultConfig, defaultConfig.provider, defaultConfig.name, `default_${defaultConfig.provider}`);
+        // OpenAI
+        const openaiConfig = settings.providers.openai;
+        if (openaiConfig && openaiConfig.apiKey && openaiConfig.modelName) {
+            models.push({
+                provider: 'openai',
+                name: 'ChatGPT',
+                modelName: openaiConfig.modelName,
+                apiKey: openaiConfig.apiKey
+            });
         }
+
+        // Custom
+        settings.providers.custom?.forEach(p => {
+            if (p.name && p.modelName && p.endpointUrl) {
+                models.push({
+                    provider: 'custom',
+                    name: p.name,
+                    modelName: p.modelName,
+                    apiKey: p.apiKey,
+                    endpointUrl: p.endpointUrl,
+                    customProviderId: p.id
+                });
+            }
+        });
         
         return models;
     }

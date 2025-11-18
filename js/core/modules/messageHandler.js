@@ -36,31 +36,6 @@ class MessageHandler {
             this.abortController = null;
         }
     }
-    
-    /**
-     * بررسی می‌کند که آیا پیکربندی مدل یک گپ هنوز در تنظیمات سراسری معتبر است یا خیر.
-     * @param {ProviderConfig} config - پیکربندی برای اعتبارسنجی.
-     * @returns {boolean}
-     */
-    _isProviderConfigValid(config) {
-        const settings = this.engine.settings;
-        if (!config || !settings || !settings.providers) return false;
-
-        // برای مدل‌های سفارشی، بررسی می‌کنیم که آیا شناسه آن هنوز در لیست وجود دارد یا خیر.
-        if (config.provider === 'custom') {
-            return settings.providers.custom?.some(p => p.id === config.customProviderId);
-        }
-        
-        // برای Gemini و OpenAI، بررسی می‌کنیم که آیا پیکربندی معتبری برای آن نوع وجود دارد یا خیر
-        if (config.provider === 'gemini') {
-            return !!settings.providers.gemini?.apiKey;
-        }
-        if (config.provider === 'openai') {
-            return !!settings.providers.openai?.apiKey;
-        }
-        
-        return false;
-    }
 
     /**
      * یک پیام جدید از کاربر دریافت کرده، به تاریخچه اضافه می‌کند و برای دریافت پاسخ به ارائه‌دهنده ارسال می‌کند.
@@ -83,25 +58,15 @@ class MessageHandler {
             return;
         }
 
-        let providerConfig = activeChat.providerConfig;
+        // --- اعتبارسنجی مدل ---
+        // پیکربندی کامل را از مرجع مدل گپ دریافت کن.
+        const providerConfig = this.engine.resolveProviderConfig(activeChat.modelInfo);
 
-        // --- اعتبارسنجی و بازیابی پیکربندی مدل ---
-        if (!this._isProviderConfigValid(providerConfig)) {
-            const oldModelName = providerConfig?.name || providerConfig?.modelName || 'مدل قبلی';
-            const defaultConfig = this.engine.chatManager._getDefaultProviderConfig();
-            
-            if (!defaultConfig) {
-                this.engine.emit('error', 'مدل فعلی گپ دیگر موجود نیست و هیچ مدل پیش‌فرض معتبری یافت نشد. لطفاً تنظیمات را بررسی کنید.');
-                return;
-            }
-            
-            const newModelDisplayName = defaultConfig.name || `${defaultConfig.provider}: ${defaultConfig.modelName}`;
-            this.engine.emit('error', `مدل «${oldModelName}» دیگر موجود نیست. گپ به «${newModelDisplayName}» تغییر کرد.`);
-            
-            // گپ را با پیکربندی پیش‌فرض به‌روز کن و به UI اطلاع بده
-            await this.engine.chatManager.updateChatModel(activeChat.id, defaultConfig);
-            providerConfig = defaultConfig;
-            activeChat = this.engine.getActiveChat(); // دریافت مجدد گپ به‌روز شده
+        // اگر پیکربندی پیدا نشد (یعنی مدل حذف شده است)، به کاربر خطا نمایش بده و متوقف شو.
+        if (!providerConfig) {
+            const modelName = activeChat.modelInfo?.displayName || activeChat.modelInfo?.modelName || 'ناشناخته';
+            this.engine.emit('error', `مدل «${modelName}» در تنظیمات موجود نیست. لطفاً مدل دیگری انتخاب کنید.`);
+            return;
         }
 
         const providerStreamer = this.engine.providers.get(providerConfig.provider);
@@ -147,7 +112,7 @@ class MessageHandler {
             const historyForApi = activeChat.messages.slice(0, -1);
             
             await providerStreamer(
-                providerConfig, // از پیکربندی مخصوص گپ استفاده کن
+                providerConfig, // از پیکربندی کامل و معتبر استفاده کن
                 historyForApi,
                 (chunk) => {
                     fullResponse += chunk;
