@@ -80,11 +80,13 @@ class SidebarManager {
             item.classList.add('active');
         }
 
+        const providerType = chat.providerConfig?.provider || 'custom';
         // افزودن آیکون ارائه‌دهنده
         const icon = document.createElement('span');
         icon.className = 'material-symbols-outlined provider-icon';
-        icon.textContent = this._getProviderIconName(chat.providerConfig?.provider);
-        icon.title = chat.providerConfig?.provider || 'unknown';
+        icon.textContent = this._getProviderIconName(providerType);
+        icon.title = chat.providerConfig?.name || providerType;
+        icon.dataset.provider = providerType; // برای استایل‌دهی رنگی
         item.appendChild(icon);
 
         const title = document.createElement('span');
@@ -197,13 +199,16 @@ class SidebarManager {
             confirmText: 'ذخیره',
             onConfirm: () => {
                 const input = document.getElementById('rename-input');
-                const newTitle = input.value.trim();
-                if (newTitle && newTitle !== chat.title) {
-                    this.engine.renameChat(chat.id, newTitle);
+                // بررسی وجود input قبل از دسترسی به value
+                if (input) {
+                    const newTitle = input.value.trim();
+                    if (newTitle && newTitle !== chat.title) {
+                        this.engine.renameChat(chat.id, newTitle);
+                    }
                 }
             }
         });
-
+    
         // مقدار ورودی را به صورت امن پس از رندر شدن تنظیم کن
         const renameInput = document.getElementById('rename-input');
         if (renameInput) {

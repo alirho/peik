@@ -51,7 +51,7 @@ class ChatEngine extends EventEmitter {
      * @param {StorageAdapter} [options.storage] - یک آداپتور ذخیره‌سازی که رابط StorageAdapter را پیاده‌سازی می‌کند.
      * @param {Object.<string, ProviderHandler>} [options.providers] - یک map از نام ارائه‌دهندگان به توابع مدیریت‌کننده آن‌ها.
      * @param {string | object} [options.limits] - نام یک پیش‌تنظیم ('web', 'ide', 'mobile', 'unlimited') یا یک آبجکت محدودیت سفارشی.
-     * @param {Settings} [options.defaultProvider] - یک ارائه‌دهنده پیش‌فرض که از `config.json` بارگذاری می‌شود.
+     * @param {ProviderConfig} [options.defaultProvider] - یک ارائه‌دهنده پیش‌فرض که از `config.json` بارگذاری می‌شود.
      */
     constructor(options = {}) {
         super();
@@ -68,7 +68,7 @@ class ChatEngine extends EventEmitter {
         this.limits = this.mergeLimits(options.limits);
         /** @type {StorageAdapter} */
         this.storage = options.storage;
-        /** @type {Settings | null} */
+        /** @type {ProviderConfig | null} */
         this.defaultProvider = options.defaultProvider || null;
 
         if (!this.storage) {
@@ -142,12 +142,22 @@ class ChatEngine extends EventEmitter {
      * @returns {boolean}
      */
     isSettingsValid(settings) {
-        if (!settings || !settings.provider) return false;
-        if (settings.provider === 'custom') {
-            const activeCustom = settings.customProviders?.find(p => p.id === settings.customProviderId);
-            return !!activeCustom?.endpointUrl;
+        if (!settings || !settings.activeProviderId || !settings.providers) return false;
+        
+        const id = settings.activeProviderId;
+        const providers = settings.providers;
+
+        if (id === 'gemini') {
+            return !!(providers.gemini?.apiKey && providers.gemini?.modelName);
         }
-        return !!settings.apiKey;
+        if (id === 'openai') {
+            return !!(providers.openai?.apiKey && providers.openai?.modelName);
+        }
+        if (providers.custom) {
+            const activeCustom = providers.custom.find(p => p.id === id);
+            return !!(activeCustom?.endpointUrl && activeCustom?.modelName);
+        }
+        return false;
     }
 
     /**
@@ -158,11 +168,28 @@ class ChatEngine extends EventEmitter {
         try {
             this.settings = await this.storage.loadSettings();
             let isDefaultProvider = false;
+
+            const emptySettings = { activeProviderId: null, providers: { gemini: {}, openai: {}, custom: [] } };
             
-            // اگر تنظیمات ذخیره‌شده توسط کاربر وجود نداشته باشد، از ارائه‌دهنده پیش‌فرض (در صورت وجود) استفاده کن
-            if (!this.settings && this.defaultProvider && this.isSettingsValid(this.defaultProvider)) {
-                this.settings = this.defaultProvider;
-                isDefaultProvider = true;
+            // اگر تنظیمات ذخیره‌شده توسط کاربر وجود نداشته باشد یا خالی باشد
+            if (!this.settings) {
+                this.settings = emptySettings;
+                if (this.defaultProvider) {
+                    // ارائه‌دهنده پیش‌فرض را به عنوان تنظیمات اولیه اعمال کن
+                    const { provider, ...config } = this.defaultProvider;
+                    if (provider === 'custom') {
+                        this.settings.providers.custom.push({ id: `default_${Date.now()}`, ...config });
+                        this.settings.activeProviderId = this.settings.providers.custom[0].id;
+                    } else if (provider === 'gemini' || provider === 'openai') {
+                        this.settings.providers[provider] = config;
+                        this.settings.activeProviderId = provider;
+                    }
+                    isDefaultProvider = this.isSettingsValid(this.settings);
+                }
+            } else {
+                 // اطمینان از اینکه ساختار settings همیشه کامل است
+                this.settings = { ...emptySettings, ...this.settings };
+                this.settings.providers = { ...emptySettings.providers, ...this.settings.providers };
             }
 
             let loadedChatList = await this.storage.loadChatList();

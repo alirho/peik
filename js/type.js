@@ -48,13 +48,19 @@
  */
 
 /**
+ * @typedef {object} ProviderSettings
+ * @property {string} modelName
+ * @property {string} apiKey
+ */
+
+/**
  * @typedef {object} Settings
- * @property {'gemini' | 'openai' | 'custom'} provider - ارائه‌دهنده فعال
- * @property {string} modelName - نام مدل
- * @property {string} apiKey - کلید API
- * @property {string} [endpointUrl] - آدرس API برای ارائه‌دهنده سفارشی (اختیاری)
- * @property {string} [customProviderId] - شناسه یکتای ارائه‌دهنده سفارشی، اگر provider برابر با 'custom' باشد
- * @property {Array<CustomProviderConfig>} [customProviders] - لیست تمام پیکربندی‌های ارائه‌دهنده سفارشی
+ * @property {string | null} activeProviderId - شناسه ارائه‌دهنده فعال ('gemini', 'openai', یا شناسه سفارشی)
+ * @property {{
+ *   gemini: ProviderSettings,
+ *   openai: ProviderSettings,
+ *   custom: Array<CustomProviderConfig>
+ * }} providers - آبجکت حاوی تمام پیکربندی‌ها
  */
 
 

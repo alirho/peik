@@ -16,7 +16,7 @@ class ChatManager {
     }
 
     /**
-     * پیکربندی ارائه‌دهنده پیش‌فرض را برای گپ‌های جدید تعیین می‌کند.
+     * پیکربندی ارائه‌دهنده فعال را برای گپ‌های جدید تعیین می‌کند.
      * اولویت با تنظیمات فعال کاربر است، سپس به پیکربندی پیش‌فرض از config.json بازمی‌گردد.
      * @returns {ProviderConfig | null}
      * @private
@@ -26,31 +26,36 @@ class ChatManager {
         
         // اولویت ۱: تنظیمات فعال کاربر
         if (settings && this.engine.isSettingsValid(settings)) {
-            if (settings.provider === 'custom') {
-                const customConfig = settings.customProviders?.find(p => p.id === settings.customProviderId);
-                if (customConfig) {
-                    // یک کپی تمیز برای جلوگیری از جهش ایجاد کن
-                    return {
-                        provider: 'custom',
-                        name: customConfig.name,
-                        modelName: customConfig.modelName,
-                        apiKey: customConfig.apiKey,
-                        endpointUrl: customConfig.endpointUrl,
-                        customProviderId: customConfig.id,
-                    };
-                }
-            } else { // Gemini or OpenAI
+            const id = settings.activeProviderId;
+            const providers = settings.providers;
+            
+            if (id === 'gemini') {
+                return { provider: 'gemini', ...providers.gemini, name: 'Gemini' };
+            }
+            if (id === 'openai') {
+                return { provider: 'openai', ...providers.openai, name: 'ChatGPT' };
+            }
+            const customConfig = providers.custom.find(p => p.id === id);
+            if (customConfig) {
+                // یک کپی تمیز برای جلوگیری از جهش ایجاد کن
                 return {
-                    provider: settings.provider,
-                    modelName: settings.modelName,
-                    apiKey: settings.apiKey,
+                    provider: 'custom',
+                    name: customConfig.name,
+                    modelName: customConfig.modelName,
+                    apiKey: customConfig.apiKey,
+                    endpointUrl: customConfig.endpointUrl,
+                    customProviderId: customConfig.id,
                 };
             }
         }
         
         // اولویت ۲: ارائه‌دهنده پیش‌فرض از config.json
-        if (this.engine.defaultProvider && this.engine.isSettingsValid(this.engine.defaultProvider)) {
-            return this.engine.defaultProvider;
+        if (this.engine.defaultProvider) {
+            // ساختار defaultProvider را اعتبارسنجی ساده کن
+            const { provider, modelName, apiKey } = this.engine.defaultProvider;
+            if (provider && modelName && apiKey) {
+                return this.engine.defaultProvider;
+            }
         }
 
         return null;

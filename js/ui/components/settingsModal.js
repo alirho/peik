@@ -14,8 +14,6 @@ class SettingsModal {
         this.engine = engine;
         this.cacheDOMElements();
         
-        /** @type {Array<CustomProviderConfig>} */
-        this.customProviders = [];
         this.confirmHandler = null;
 
         // --- ثبت event handlerهای bind شده برای حذف آسان ---
@@ -120,31 +118,23 @@ class SettingsModal {
         this.form.reset();
         this.sessionOnlyCheckbox.checked = false; // پیش‌فرض به ذخیره‌سازی پایدار
         
-        const settings = this.engine.settings || {};
+        const settings = this.engine.settings || { providers: {} };
+        const providers = settings.providers || {};
         
-        // پر کردن بخش Gemini فقط اگر ارائه‌دهنده فعال باشد
-        this.geminiModelInput.value = settings.provider === 'gemini' ? (settings.modelName || '') : '';
-        this.geminiKeyInput.value = settings.provider === 'gemini' ? (settings.apiKey || '') : '';
+        this.geminiModelInput.value = providers.gemini?.modelName || '';
+        this.geminiKeyInput.value = providers.gemini?.apiKey || '';
 
-        // پر کردن بخش OpenAI فقط اگر ارائه‌دهنده فعال باشد
-        this.chatgptModelInput.value = settings.provider === 'openai' ? (settings.modelName || '') : '';
-        this.chatgptKeyInput.value = settings.provider === 'openai' ? (settings.apiKey || '') : '';
-
+        this.chatgptModelInput.value = providers.openai?.modelName || '';
+        this.chatgptKeyInput.value = providers.openai?.apiKey || '';
 
         // رندر کردن لیست ارائه‌دهندگان سفارشی
-        this.customProviders = settings.customProviders || [];
         this.customProviderList.innerHTML = '';
-        this.customProviders.forEach(p => this.renderCustomProvider(p));
+        providers.custom?.forEach(p => this.renderCustomProvider(p));
 
         // انتخاب رادیوباتن فعال
-        const activeProviderId = settings.provider === 'custom' ? settings.customProviderId : settings.provider;
-        const activeRadio = this.form.querySelector(`input[name="active_provider"][value="${activeProviderId}"]`);
+        const activeRadio = this.form.querySelector(`input[name="active_provider"][value="${settings.activeProviderId}"]`);
         if (activeRadio) {
             activeRadio.checked = true;
-        } else if (settings.provider) {
-             // اگر ارائه‌دهنده فعال وجود ندارد (مثلاً حذف شده)، اولین گزینه را انتخاب کن
-            const firstRadio = this.form.querySelector('input[name="active_provider"]');
-            if (firstRadio) firstRadio.checked = true;
         }
     }
 
@@ -268,101 +258,81 @@ class SettingsModal {
      * @returns {Settings|null} - آبجکت تنظیمات یا null در صورت شکست اعتبارسنجی.
      */
     getSettingsFromForm() {
-        // ۱. تعیین ارائه‌دهنده فعال
-        const activeRadio = this.form.querySelector('input[name="active_provider"]:checked');
-        let activeProviderId = activeRadio ? activeRadio.value : null;
-
-        // اگر هیچ ارائه‌دهنده‌ای انتخاب نشده، به ارائه‌دهنده پیش‌فرض یا تنظیمات فعلی بازگرد
-        if (!activeProviderId) {
-            if (this.engine.settings && this.engine.isSettingsValid(this.engine.settings)) {
-                activeProviderId = this.engine.settings.provider === 'custom'
-                    ? this.engine.settings.customProviderId
-                    : this.engine.settings.provider;
-            } else {
-                // اگر هیچ تنظیمات معتبری وجود ندارد، از کاربر بخواه یکی را انتخاب کند
-                alert('لطفاً یک ارائه‌دهنده فعال را انتخاب کنید.');
-                return null;
+        // ۱. ساختار پایه تنظیمات را ایجاد کن و تمام داده‌ها را جمع‌آوری کن
+        const newSettings = {
+            activeProviderId: null,
+            providers: {
+                gemini: {
+                    modelName: this.geminiModelInput.value.trim(),
+                    apiKey: this.geminiKeyInput.value.trim(),
+                },
+                openai: {
+                    modelName: this.chatgptModelInput.value.trim(),
+                    apiKey: this.chatgptKeyInput.value.trim(),
+                },
+                custom: Array.from(this.customProviderList.querySelectorAll('.custom-provider-item')).map(el => ({
+                    id: el.dataset.id,
+                    name: el.querySelector('.custom-provider-name-input').value.trim(),
+                    modelName: el.querySelector('.custom-provider-model-input').value.trim(),
+                    apiKey: el.querySelector('.custom-provider-key-input').value.trim(),
+                    endpointUrl: el.querySelector('.custom-provider-endpoint-input').value.trim(),
+                })),
             }
-        }
+        };
 
-        // ۲. جمع‌آوری و اعتبارسنجی ارائه‌دهندگان سفارشی (این کار همیشه باید انجام شود)
-        const customProviderElements = this.customProviderList.querySelectorAll('.custom-provider-item');
-        const customProviders = Array.from(customProviderElements).map(el => ({
-            id: el.dataset.id,
-            name: el.querySelector('.custom-provider-name-input').value.trim(),
-            modelName: el.querySelector('.custom-provider-model-input').value.trim(),
-            apiKey: el.querySelector('.custom-provider-key-input').value.trim(),
-            endpointUrl: el.querySelector('.custom-provider-endpoint-input').value.trim(),
-        }));
-
-        const names = customProviders.map(p => p.name);
-        if (names.some(n => !n)) {
+        // ۲. اعتبارسنجی نام‌های منحصر به فرد برای ارائه‌دهندگان سفارشی
+        const customNames = newSettings.providers.custom.map(p => p.name);
+        if (customNames.some(n => !n)) {
             alert('هر پیکربندی سفارشی باید یک نام داشته باشد.');
             return null;
         }
-        const uniqueNames = new Set(names);
-        if (uniqueNames.size !== names.length) {
+        if (new Set(customNames).size !== customNames.length) {
             alert('نام پیکربندی‌های سفارشی باید منحصر به فرد باشد.');
             return null;
         }
+
+        // ۳. تعیین و اعتبارسنجی ارائه‌دهنده فعال
+        const activeRadio = this.form.querySelector('input[name="active_provider"]:checked');
+        if (!activeRadio) {
+            // اگر کاربر چیزی انتخاب نکرده، اما یک ارائه‌دهنده پیش‌فرض معتبر وجود دارد، اجازه بده ذخیره شود.
+            if (this.engine.isSettingsValid(this.engine.settings)) {
+                newSettings.activeProviderId = this.engine.settings.activeProviderId;
+                return newSettings;
+            }
+            alert('لطفاً یک ارائه‌دهنده فعال را انتخاب کنید.');
+            return null;
+        }
         
-        // ۳. اعتبارسنجی بر اساس ارائه‌دهنده فعال و ساخت آبجکت تنظیمات
-        let activeSetting = {};
-        if (activeProviderId === 'gemini') {
-            const modelName = this.geminiModelInput.value.trim();
-            const apiKey = this.geminiKeyInput.value.trim();
-            if (!modelName || !apiKey) {
-                alert('برای استفاده از Gemini به عنوان ارائه‌دهنده فعال، لطفاً نام مدل و کلید API را وارد کنید.');
+        newSettings.activeProviderId = activeRadio.value;
+        const id = newSettings.activeProviderId;
+
+        if (id === 'gemini') {
+            const config = newSettings.providers.gemini;
+            if (!config.modelName || !config.apiKey) {
+                alert('برای فعال کردن Gemini، لطفاً نام مدل و کلید API را وارد کنید.');
                 return null;
             }
-            activeSetting = { provider: 'gemini', modelName, apiKey };
-
-        } else if (activeProviderId === 'openai') {
-            const modelName = this.chatgptModelInput.value.trim();
-            const apiKey = this.chatgptKeyInput.value.trim();
-            if (!modelName || !apiKey) {
-                alert('برای استفاده از ChatGPT به عنوان ارائه‌دهنده فعال، لطفاً نام مدل و کلید API را وارد کنید.');
+        } else if (id === 'openai') {
+            const config = newSettings.providers.openai;
+            if (!config.modelName || !config.apiKey) {
+                alert('برای فعال کردن ChatGPT، لطفاً نام مدل و کلید API را وارد کنید.');
                 return null;
             }
-            activeSetting = { provider: 'openai', modelName, apiKey };
-
-        } else { // ارائه‌دهنده سفارشی
-            const customConfig = customProviders.find(p => p.id === activeProviderId);
-            
-            if (!customConfig) {
-                // این حالت زمانی رخ می‌دهد که ارائه‌دهنده پیش‌فرض از config.json یک ارائه‌دهنده سفارشی بوده
-                // اما در UI رندر نشده است. باید به تنظیمات فعلی موتور اعتماد کنیم.
-                if (this.engine.settings?.provider === 'custom' && this.engine.settings?.customProviderId === activeProviderId) {
-                     activeSetting = { ...this.engine.settings };
-                } else {
-                    alert(`پیکربندی فعال با شناسه "${activeProviderId}" یافت نشد. لطفاً یک گزینه را انتخاب کنید.`);
-                    return null;
-                }
-            } else {
-                if (!customConfig.modelName || !customConfig.endpointUrl) {
-                    alert(`برای فعال کردن پیکربندی "${customConfig.name}"، لطفاً نام مدل و آدرس نقطه پایانی را پر کنید.`);
-                    return null;
-                }
-                try {
-                    new URL(customConfig.endpointUrl);
-                } catch (_) {
-                    alert(`لطفاً یک آدرس نقطه پایانی معتبر برای "${customConfig.name}" وارد کنید.`);
-                    return null;
-                }
-                activeSetting = {
-                    provider: 'custom',
-                    modelName: customConfig.modelName,
-                    apiKey: customConfig.apiKey,
-                    endpointUrl: customConfig.endpointUrl,
-                    customProviderId: customConfig.id,
-                };
+        } else {
+            const customConfig = newSettings.providers.custom.find(p => p.id === id);
+            if (!customConfig || !customConfig.modelName || !customConfig.endpointUrl) {
+                alert(`برای فعال کردن پیکربندی "${customConfig?.name || 'سفارشی'}"، لطفاً نام مدل و آدرس نقطه پایانی را پر کنید.`);
+                return null;
+            }
+            try {
+                new URL(customConfig.endpointUrl);
+            } catch (_) {
+                alert(`لطفاً یک آدرس نقطه پایانی معتبر برای "${customConfig.name}" وارد کنید.`);
+                return null;
             }
         }
         
-        // ۴. افزودن لیست کامل ارائه‌دهندگان سفارشی به آبجکت نهایی
-        activeSetting.customProviders = customProviders;
-
-        return activeSetting;
+        return newSettings;
     }
 
     /**

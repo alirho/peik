@@ -44,17 +44,22 @@ class MessageHandler {
      */
     _isProviderConfigValid(config) {
         const settings = this.engine.settings;
-        if (!config || !settings) return false;
+        if (!config || !settings || !settings.providers) return false;
 
         // برای مدل‌های سفارشی، بررسی می‌کنیم که آیا شناسه آن هنوز در لیست وجود دارد یا خیر.
         if (config.provider === 'custom') {
-            return settings.customProviders?.some(p => p.id === config.customProviderId);
+            return settings.providers.custom?.some(p => p.id === config.customProviderId);
         }
-        // برای Gemini و OpenAI، نمی‌توانیم با اطمینان بگوییم کلید حذف شده است،
-        // اما می‌توانیم بررسی کنیم که آیا این نوع ارائه‌دهنده در تنظیمات فعال فعلی وجود دارد یا خیر.
-        // اگر کاربر ارائه‌دهنده فعال را تغییر داده باشد، این کار حداقل جلوی برخی خطاها را می‌گیرد.
-        // خطای نهایی در هنگام فراخوانی API مشخص خواهد شد که بازخورد مناسبی است.
-        return true;
+        
+        // برای Gemini و OpenAI، بررسی می‌کنیم که آیا پیکربندی معتبری برای آن نوع وجود دارد یا خیر
+        if (config.provider === 'gemini') {
+            return !!settings.providers.gemini?.apiKey;
+        }
+        if (config.provider === 'openai') {
+            return !!settings.providers.openai?.apiKey;
+        }
+        
+        return false;
     }
 
     /**
@@ -90,7 +95,8 @@ class MessageHandler {
                 return;
             }
             
-            this.engine.emit('error', `مدل «${oldModelName}» دیگر موجود نیست. گپ به مدل پیش‌فرض بازگردانده شد.`);
+            const newModelDisplayName = defaultConfig.name || `${defaultConfig.provider}: ${defaultConfig.modelName}`;
+            this.engine.emit('error', `مدل «${oldModelName}» دیگر موجود نیست. گپ به «${newModelDisplayName}» تغییر کرد.`);
             
             // گپ را با پیکربندی پیش‌فرض به‌روز کن و به UI اطلاع بده
             await this.engine.chatManager.updateChatModel(activeChat.id, defaultConfig);

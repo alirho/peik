@@ -84,6 +84,7 @@ html.dark .model-selector-dropdown {
 .model-selector-item {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
     padding: 0.625rem 0.75rem;
     border-radius: 0.375rem;
@@ -97,18 +98,36 @@ html.dark .model-selector-dropdown {
 html.dark .model-selector-item:hover {
     background-color: var(--hover-dark);
 }
-.model-selector-item .provider-icon {
-    font-size: 1.125rem;
-    color: var(--text-muted-light);
+.model-selector-item.active {
+    background-color: var(--color-primary-light);
 }
-html.dark .model-selector-item .provider-icon {
-    color: var(--text-muted-dark);
+html.dark .model-selector-item.active {
+    background-color: var(--surface-dark-lighter);
+}
+.model-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    overflow: hidden;
 }
 .model-selector-item .model-item-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.model-selector-item .checkmark {
+    color: var(--color-primary);
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+
+/* Colored Provider Icons */
+.provider-icon[data-provider="gemini"], #model-selector-icon[data-provider="gemini"] { color: #4285F4; }
+.provider-icon[data-provider="openai"], #model-selector-icon[data-provider="openai"] { color: #10a37f; }
+.provider-icon[data-provider="custom"], #model-selector-icon[data-provider="custom"] { color: #94a3b8; }
+html.dark .provider-icon[data-provider="custom"], html.dark #model-selector-icon[data-provider="custom"] { color: #94a3b8; }
+
 
 /* Chat Interface Wrapper */
 .chat-interface {

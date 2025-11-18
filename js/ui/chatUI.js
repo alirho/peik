@@ -93,20 +93,15 @@ class ChatUI {
     }
 
     isSettingsValid(settings) {
-        if (!settings || !settings.provider) return false;
-        if (settings.provider === 'custom') {
-            const activeCustom = settings.customProviders?.find(p => p.id === settings.customProviderId);
-            return !!activeCustom?.endpointUrl;
-        }
-        return !!settings.apiKey;
+        return this.engine.isSettingsValid(settings);
     }
 
     bindCoreEvents() {
         this.engineListeners = {
-            init: ({ settings, chats, activeChat, isDefaultProvider }) => {
+            init: ({ settings, chats, activeChat }) => {
                 if (!this.isSettingsValid(settings) && !this.engine.defaultProvider) {
                     this.settingsModal.show(true);
-                } else if (isDefaultProvider) {
+                } else if (!this.isSettingsValid(settings) && this.engine.defaultProvider) {
                     this.messageRenderer.displayTemporaryInfo('شما در حال استفاده از مدل پیش‌فرض هستید. برای افزودن کلید شخصی به تنظیمات مراجعه کنید.');
                 }
                 
@@ -240,29 +235,47 @@ class ChatUI {
         
         this.dom.modelSelectorName.textContent = `${displayName}: ${config.modelName}`;
         this.dom.modelSelectorIcon.textContent = this._getProviderIconName(config.provider);
+        this.dom.modelSelectorIcon.dataset.provider = config.provider;
         
-        this._populateModelDropdown();
+        this._populateModelDropdown(chat);
         this.dom.modelSelector.classList.remove('hidden');
     }
 
     /**
      * منوی کشویی مدل را با تمام ارائه‌دهندگان موجود پر می‌کند.
+     * @param {import('../types.js').Chat} activeChat
      */
-    _populateModelDropdown() {
+    _populateModelDropdown(activeChat) {
         const dropdown = this.dom.modelSelectorDropdown;
         dropdown.innerHTML = '';
         const availableModels = this._getAllAvailableModels();
+        const activeConfig = activeChat.providerConfig;
 
         availableModels.forEach(modelConfig => {
             const item = document.createElement('div');
             item.className = 'model-selector-item';
             item.dataset.config = JSON.stringify(modelConfig);
             
+            // بررسی اینکه آیا این مدل، مدل فعال گپ است یا خیر
+            let isActive = false;
+            if (activeConfig.provider === 'custom' && modelConfig.provider === 'custom') {
+                isActive = activeConfig.customProviderId === modelConfig.customProviderId;
+            } else {
+                isActive = activeConfig.provider === modelConfig.provider;
+            }
+
+            if (isActive) {
+                item.classList.add('active');
+            }
+            
             const displayName = modelConfig.name || (modelConfig.provider === 'gemini' ? 'Gemini' : modelConfig.provider === 'openai' ? 'ChatGPT' : 'سفارشی');
 
             item.innerHTML = `
-                <span class="material-symbols-outlined provider-icon">${this._getProviderIconName(modelConfig.provider)}</span>
-                <span class="model-item-name">${displayName}: ${modelConfig.modelName}</span>
+                <div class="model-item-info">
+                    <span class="material-symbols-outlined provider-icon" data-provider="${modelConfig.provider}">${this._getProviderIconName(modelConfig.provider)}</span>
+                    <span class="model-item-name">${displayName}: ${modelConfig.modelName}</span>
+                </div>
+                ${isActive ? '<span class="material-symbols-outlined checkmark">check</span>' : ''}
             `;
             dropdown.appendChild(item);
         });
@@ -274,33 +287,39 @@ class ChatUI {
      */
     _getAllAvailableModels() {
         const models = [];
-        const settings = this.engine.settings;
-        if (!settings) return [];
+        const addedProviders = new Set(); // برای جلوگیری از افزودن تکراری
         
-        // افزودن ارائه‌دهنده فعال (اگر سفارشی نباشد)
-        if (settings.provider && settings.provider !== 'custom' && settings.apiKey) {
-            models.push({
-                provider: settings.provider,
-                name: settings.provider === 'gemini' ? 'Gemini' : 'ChatGPT',
-                modelName: settings.modelName,
-                apiKey: settings.apiKey,
+        const processProvider = (config, type, name, id) => {
+            if (config && config.modelName && config.apiKey) {
+                const key = type === 'custom' ? id : type;
+                if (!addedProviders.has(key)) {
+                    models.push({
+                        provider: type,
+                        name: name,
+                        modelName: config.modelName,
+                        apiKey: config.apiKey,
+                        ...(type === 'custom' && { endpointUrl: config.endpointUrl, customProviderId: id })
+                    });
+                    addedProviders.add(key);
+                }
+            }
+        };
+
+        const settings = this.engine.settings;
+        if (settings && settings.providers) {
+            processProvider(settings.providers.gemini, 'gemini', 'Gemini');
+            processProvider(settings.providers.openai, 'openai', 'ChatGPT');
+            settings.providers.custom?.forEach(p => {
+                if (p.endpointUrl) { // اعتبار سنجی اولیه برای مدل های سفارشی
+                    processProvider(p, 'custom', p.name, p.id);
+                }
             });
         }
         
-        // افزودن تمام ارائه‌دهندگان سفارشی معتبر
-        if (settings.customProviders) {
-            settings.customProviders.forEach(p => {
-                if (p.name && p.modelName && p.endpointUrl) {
-                    models.push({
-                        provider: 'custom',
-                        name: p.name,
-                        modelName: p.modelName,
-                        apiKey: p.apiKey,
-                        endpointUrl: p.endpointUrl,
-                        customProviderId: p.id,
-                    });
-                }
-            });
+        // مدل پیش‌فرض از config.json را نیز اضافه کن، اگر قبلاً توسط کاربر پیکربندی نشده باشد
+        const defaultConfig = this.engine.defaultProvider;
+        if (defaultConfig) {
+            processProvider(defaultConfig, defaultConfig.provider, defaultConfig.name, `default_${defaultConfig.provider}`);
         }
         
         return models;
