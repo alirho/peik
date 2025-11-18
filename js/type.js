@@ -30,11 +30,22 @@
  */
 
 /**
+ * @typedef {object} CustomProviderConfig
+ * @property {string} id - یک شناسه یکتای سمت کاربر برای پیکربندی
+ * @property {string} name - یک نام تعریف شده توسط کاربر برای این ارائه‌دهنده سفارشی
+ * @property {string} modelName
+ * @property {string} apiKey
+ * @property {string} endpointUrl
+ */
+
+/**
  * @typedef {object} Settings
  * @property {'gemini' | 'openai' | 'custom'} provider - ارائه‌دهنده فعال
  * @property {string} modelName - نام مدل
  * @property {string} apiKey - کلید API
  * @property {string} [endpointUrl] - آدرس API برای ارائه‌دهنده سفارشی (اختیاری)
+ * @property {string} [customProviderId] - شناسه یکتای ارائه‌دهنده سفارشی، اگر provider برابر با 'custom' باشد
+ * @property {Array<CustomProviderConfig>} [customProviders] - لیست تمام پیکربندی‌های ارائه‌دهنده سفارشی
  */
 
 /**

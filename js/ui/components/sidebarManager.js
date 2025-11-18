@@ -222,6 +222,13 @@ class SidebarManager {
     }
 
     _handleConfirm() {
+        // اگر مودال تنظیمات باز است، اجازه دهید کنترلر رویداد آن کار را انجام دهد.
+        // این کار از اجرای همزمان دو کنترلر و ایجاد تداخل جلوگیری می‌کند.
+        const settingsModalEl = document.getElementById('settings-modal');
+        if (settingsModalEl && !settingsModalEl.classList.contains('hidden')) {
+            return;
+        }
+
         if (this.confirmHandler) {
             this.confirmHandler();
         }
