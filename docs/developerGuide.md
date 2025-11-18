@@ -71,6 +71,7 @@ chatEngine.on('activeChatSwitched', (activeChat) => {
 | `registerProvider(name, handler)` | `name: string, handler: Function` | یک ارائه‌دهنده جدید را به صورت پویا ثبت می‌کند. |
 | `startNewChat()`         | -                        | یک چت جدید و خالی ایجاد کرده و آن را به عنوان چت فعال تنظیم می‌کند.       |
 | `switchActiveChat(chatId)`| `chatId: string`        | چت مشخص شده را به عنوان چت فعال تنظیم می‌کند.                         |
+| `updateChatModel(chatId, providerConfig)` | `chatId: string`, `providerConfig: object` | پیکربندی مدل برای یک گپ خاص را به‌روزرسانی می‌کند. |
 | `renameChat(chatId, newTitle)` | `chatId: string, newTitle: string` | عنوان یک چت مشخص را تغییر می‌دهد.                                     |
 | `deleteChat(chatId)`     | `chatId: string`         | یک چت مشخص را از لیست حذف می‌کند.                                      |
 | `destroy()`              | -                        | تمام منابع موتور (شنوندگان رویداد، تایمرها) را برای جلوگیری از نشت حافظه پاک‌سازی می‌کند. |
@@ -92,9 +93,31 @@ chatEngine.sendMessage('این عکس را ببین', imageObject);
 
 -   **`Message`**: نماینده یک پیام در گفتگو.
 -   **`ImageData`**: نماینده یک تصویر پیوست شده.
--   **`Chat`**: نماینده یک گفتگوی کامل.
 
--   **`CustomProviderConfig`**: نماینده یک پیکربندی برای ارائه‌دهنده سفارشی.
+-   **`ChatModelInfo`**: یک **مرجع** به یک مدل است که در هر گپ ذخیره می‌شود. این آبجکت اطلاعات حساس (مانند کلید API) را شامل **نمی‌شود**.
+    ```javascript
+    /**
+     * @typedef {object} ChatModelInfo
+     * @property {'gemini' | 'openai' | 'custom'} provider - نوع ارائه‌دهنده
+     * @property {string} [customProviderId] - شناسه یکتای پیکربندی ارائه‌دهنده سفارشی، در صورت وجود
+     * @property {string} displayName - نام نمایشی برای ارائه‌دهنده (مثلاً "Gemini", "Ollama Llama3")
+     * @property {string} modelName - نام مدل خاص (مثلاً "gemini-2.5-flash")
+     */
+    ```
+-   **`Chat`**: نماینده یک گفتگوی کامل. به جای ذخیره پیکربندی کامل، فقط یک `modelInfo` را نگه می‌دارد.
+    ```javascript
+    /**
+     * @typedef {object} Chat
+     * @property {string} id - شناسه یکتای گپ
+     * @property {string} title - عنوان گپ
+     * @property {Array<Message>} [messages] - ...
+     * @property {number} createdAt - ...
+     * @property {number} updatedAt - ...
+     * @property {ChatModelInfo} modelInfo - مرجعی به مدل استفاده شده توسط این گپ
+     */
+    ```
+
+-   **`CustomProviderConfig`**: نماینده یک پیکربندی کامل برای ارائه‌دهنده سفارشی که در تنظیمات ذخیره می‌شود.
     ```javascript
     /**
      * @typedef {object} CustomProviderConfig
@@ -106,16 +129,16 @@ chatEngine.sendMessage('این عکس را ببین', imageObject);
      */
     ```
 
--   **`Settings`**: نماینده تنظیمات کاربر. این آبجکت شامل اطلاعات ارائه‌دهنده فعال و همچنین لیست تمام پیکربندی‌های سفارشی است.
+-   **`Settings`**: نماینده تنظیمات کاربر. این آبجکت شامل اطلاعات **تمام** ارائه‌دهندگان است تا بتوان لیست کاملی از مدل‌های موجود را نمایش داد.
     ```javascript
     /**
      * @typedef {object} Settings
-     * @property {'gemini' | 'openai' | 'custom'} provider - ارائه‌دهنده فعال
-     * @property {string} modelName - نام مدل
-     * @property {string} apiKey - کلید API
-     * @property {string} [endpointUrl] - آدرس API برای ارائه‌دهنده سفارشی (اختیاری)
-     * @property {string} [customProviderId] - شناسه یکتای ارائه‌دهنده سفارشی، اگر provider برابر با 'custom' باشد
-     * @property {Array<CustomProviderConfig>} [customProviders] - لیست تمام پیکربندی‌های ارائه‌دهنده سفارشی
+     * @property {string | null} activeProviderId - شناسه ارائه‌دهنده فعال ('gemini', 'openai', یا شناسه سفارشی)
+     * @property {{
+     *   gemini: { modelName: string, apiKey: string },
+     *   openai: { modelName: string, apiKey: string },
+     *   custom: Array<CustomProviderConfig>
+     * }} providers - آبجکت حاوی تمام پیکربندی‌ها
      */
     ```
 
@@ -124,7 +147,7 @@ chatEngine.sendMessage('این عکس را ببین', imageObject);
     ```javascript
     /**
      * @callback ProviderHandler
-     * @param {Settings} settings - تنظیمات کاربر برای این ارائه‌دهنده
+     * @param {object} providerConfig - پیکربندی **کامل** و استخراج شده برای این ارائه‌دهنده
      * @param {Array<Message>} history - تاریخچه پیام‌ها برای ارسال به API
      * @param {(chunk: string) => void} onChunk - تابعی که برای هر قطعه از پاسخ استریم فراخوانی می‌شود
      * @param {AbortSignal} [signal] - یک سیگنال اختیاری برای لغو درخواست
@@ -208,7 +231,7 @@ const chatEngine = new ChatEngine({ storage: MyCustomStorage });
     -   کش کردن المان‌های DOM.
     -   اتصال شنوندگان رویداد (Event Listeners).
     -   بارگذاری داده‌های اولیه.
--   **`destroy()`**: این متد باید **معکوس** `init` باشد. مسئولیت اصلی آن پاک‌سازی تمام منابعی است که کامپوننت ایجاد کرده است. **این مرحله برای جلوگیری از نشت حافظه حیاتی است.**
+-   **`destroy()`**: این متد باید **معکوس** `init` باشد. مسئولیت اصلی آن پاک‌سازی کامل تمام منابعی است که کامپوننت ایجاد کرده است. **این مرحله برای جلوگیری از نشت حافظه حیاتی است.**
     -   **حذف تمام شنوندگان رویداد**: هر `addEventListener` باید یک `removeEventListener` متناظر در `destroy` داشته باشد.
     -   پاک کردن تایمرها: تمام `setInterval` یا `setTimeout` های فعال باید با `clearInterval` یا `clearTimeout` پاک شوند.
     -   آزاد کردن منابع دیگر: هر منبع دیگری مانند `BroadcastChannel` باید بسته (`close`) شود.
