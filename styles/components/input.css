@@ -1,11 +1,22 @@
 .input-area {
-    padding: 1rem 0 1.5rem 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 1rem 1.5rem 1.5rem;
     flex-shrink: 0;
+}
+
+.input-wrapper {
+    width: 100%;
+    max-width: 56rem;
+    display: flex;
+    flex-direction: column;
 }
 
 .input-container {
     position: relative;
     margin: 0;
+    width: 100%;
 }
 
 .message-input {
@@ -89,6 +100,7 @@ html.dark .attach-button:hover:not(:disabled) {
     padding-bottom: 0.75rem;
     position: relative;
     display: inline-block; /* Fit content */
+    align-self: flex-start; /* Align to start of wrapper */
 }
 
 .preview-image {

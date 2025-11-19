@@ -148,10 +148,8 @@ html.dark .provider-icon[data-provider="custom"], html.dark #model-selector-icon
     flex-direction: column;
     flex-grow: 1;
     width: 100%;
-    max-width: 56rem;
-    margin: 0 auto;
+    margin: 0;
     overflow: hidden;
-    padding: 0 1.5rem;
 }
 
 /* ==================== Responsive ==================== */
@@ -170,7 +168,7 @@ html.dark .provider-icon[data-provider="custom"], html.dark #model-selector-icon
     }
 
     .chat-interface {
-        padding: 0 1rem;
+        padding: 0;
     }
 
     #model-selector-button {
