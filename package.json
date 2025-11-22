@@ -1,0 +1,15 @@
+{
+  "name": "peik",
+  "version": "0.8.0",
+  "description": "ابزار متن‌باز گفت‌وگو با مدل‌های هوش مصنوعی",
+  "type": "module",
+  "scripts": {
+    "test:core": "node examples/testCore.js"
+  },
+  "keywords": ["ai", "chat", "llm", "persian"],
+  "author": "Peik Contributors",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

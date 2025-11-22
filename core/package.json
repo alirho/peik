@@ -1,0 +1,12 @@
+{
+  "name": "@peik/core",
+  "version": "1.0.0",
+  "description": "هسته مستقل و محیط-آگنوستیک برای چت هوش مصنوعی پیک",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Peik Contributors",
+  "license": "MIT"
+}
