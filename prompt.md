@@ -1267,3 +1267,20 @@ core/
 - نباید مستقیماً fetch استفاده کنن، از HttpClient استفاده کنن
 - باید validateConfig داشته باشن (بررسی apiKey و modelName)
 - فرمت پیام‌های پیک رو به فرمت API مربوطه تبدیل کنن
+
+### پرامپت ۱۱۰
+خب، Provider ها آماده شدن ولی به یک افزونه HttpClient نیاز دارن. می‌خوام یک افزونه HttpClient بسازیم که از Fetch API استفاده کنه. مسیر plugins/platform/fetchHttp/index.js. این افزونه باید:
+- از Plugin ارث‌بری کنه
+- از HttpClientInterface پیروی کنه
+- category اش 'network' باشه
+- دو متد داشته باشه:
+  1. request(url, options): برای درخواست‌های عادی
+  2. streamRequest(url, options, onChunk, signal): برای دریافت استریم SSE
+
+متد streamRequest باید:
+- از fetch با ReadableStream استفاده کنه
+- هر خط از استریم رو به onChunk بفرسته
+- از signal برای لغو درخواست پشتیبانی کنه
+- خطاهای شبکه رو مدیریت کنه
+
+نکته: این افزونه فقط در مرورگر یا Node.js 18+ کار می‌کنه (که fetch داره).
