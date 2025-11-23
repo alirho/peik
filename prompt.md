@@ -1411,3 +1411,27 @@ plugins/presentation/webUI/
    - فقط یک div با id="root" داشته باشه
    - هسته و افزونه‌ها رو import کنه
    - WebUI رو راه‌اندازی کنه
+
+### پرامپت ۱۱۷
+1. من فایل کتابخانه markdown-it به آدرس `plugins/presentation/webUI/lib/` منتقل کردم، ازت می‌خوام در utils/markdownService.js مسیر import را ویرایش کنی.
+2. فایل index.html را در ریشه پروژه با توجه به ساختار جدید پروژه بروزرسانی کن، تا بتونه از افزونه جدید webUI استفاده کنه.
+
+### پرامپت ۱۱۸
+فایل index.html را در ریشه پروژه با توجه به ساختار جدید پروژه بروزرسانی کن، تا بتونه از افزونه جدید webUI استفاده کنه.
+
+دقت کن من می‌خوام پروژه با ساختار جدید (افزونه محور) اجرا بشه نه ساختار قدیمی.
+
+### پرامپت ۱۱۹
+فایل index.html  که در ریشه پروژه هست را به صورت زیر بروزرسانی کن:
+- یک div با id="root" داشته باشه
+- تمام CSS های webUI رو لینک کنه (از plugins/presentation/webUI/styles/)
+- یک اسکریپت داشته باشه که:
+  - هسته Peik رو import کنه
+  - افزونه‌های لازم رو import کنه:
+    - memoryStorage
+    - FetchHttp
+    - GeminiProvider
+    - OpenAIProvider
+    - WebUI
+  - همه رو ثبت کنه
+  - peik.init() رو صدا بزنه

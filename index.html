@@ -10,11 +10,57 @@
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+    <!-- WebUI Styles -->
+    <link rel="stylesheet" href="plugins/presentation/webUI/styles/main.css">
 </head>
 <body>
     <div id="root"></div>
     
-    <!-- Load main application module -->
-    <script type="module" src="js/main.js"></script>
+    <!-- Main Application Script -->
+    <script type="module">
+        import { Peik } from './core/src/index.js';
+        import MemoryStorage from './plugins/platform/memoryStorage/index.js';
+        import FetchHttp from './plugins/platform/fetchHttp/index.js';
+        import GeminiProvider from './plugins/core/geminiProvider/index.js';
+        import OpenAIProvider from './plugins/core/openaiProvider/index.js';
+        import WebUIPlugin from './plugins/presentation/webUI/index.js';
+
+        (async () => {
+            try {
+                console.log('🚀 در حال راه‌اندازی پیک...');
+                const peik = new Peik();
+
+                // ۱. ثبت افزونه‌های زیرساختی
+                // نکته: برای ذخیره‌سازی دائمی باید از IndexedDBPlugin استفاده شود (فعلا MemoryStorage برای تست)
+                await peik.use(new MemoryStorage());
+                await peik.use(new FetchHttp());
+
+                // ۲. ثبت ارائه‌دهندگان هوش مصنوعی
+                await peik.use(new GeminiProvider());
+                await peik.use(new OpenAIProvider());
+
+                // ۳. ثبت رابط کاربری (متصل به div#root)
+                await peik.use(new WebUIPlugin('root'));
+
+                // ۴. راه‌اندازی نهایی
+                await peik.init();
+                console.log('✅ پیک با موفقیت آماده شد.');
+
+            } catch (error) {
+                console.error("❌ خطای مهلک در راه‌اندازی:", error);
+                const root = document.getElementById('root');
+                if (root) {
+                    root.innerHTML = `
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#ef4444;font-family:'Vazirmatn',sans-serif;text-align:center;padding:20px;">
+                            <span class="material-symbols-outlined" style="font-size:48px;margin-bottom:16px;">error</span>
+                            <h2>خطا در راه‌اندازی برنامه</h2>
+                            <p style="direction:ltr;background:#eee;padding:10px;border-radius:5px;margin-top:10px;color:#333;">${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+        })();
+    </script>
 </body>
 </html>
