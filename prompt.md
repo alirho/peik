@@ -1530,3 +1530,45 @@ Uncaught (in promise) TypeError: this.engine.saveSettings is not a function
 chat.js:110:25
     sendMessage http://localhost:3000/core/src/chat.js:110
 ```
+
+### پرامپت ۱۳۰
+ویژگی‌های «ویرایش نام گپ»، «رونوشت پیام» و «بارگذاری تصویر» که در نسخه پیشین بودن، الان در UI جدید نیستن. این‌ها باید بخشی از افزونه `web-ui` باشن.
+1. `sidebar.js` (ویرایش نام):
+   - کنار دکمه حذف، یک دکمه «ویرایش» (با آیکون `edit`) اضافه کن.
+   - نام جدید را از کاربر بگیر.
+2. رونوشت پیام
+   - داخل حباب پیام، یک دکمه کوچک «رونوشت» (آیکون `content_copy`) قرار بده.
+   - با کلیک روی آن، متن پیام را در کلیپ‌بورد رونوشت کن.
+   - برای بازخورد به کاربر، آیکون را برای ۲ ثانیه به `check` تغییر بده.
+3. بارگذاری تصویر
+   - یک دکمه با آیکون `image` به کنار دکمه ارسال اضافه کن.
+   - با کلیک روی آن، یک `input[type=file]` مخفی (فقط تصاویر) باز شود.
+   - وقتی تصویر انتخاب شد:
+     - آن را به Base64 تبدیل کن.
+     - یک پیش‌نمایش کوچک (Thumbnail) با دکمه حذف (X) بالای کادر متن نشان بده.
+   - در متد `sendMessage`، اگر تصویری انتخاب شده بود، آن را به عنوان آرگومان دوم به `chat.sendMessage(text, { mimeType, data })` پاس بده.
+
+### پرامپت ۱۳۱
+می‌خوام دکمه‌های ویرایش و حذف هر دو در یک لیست دراپ داونی نمایش داده بشن. یک دکمه سه نقطه افقی قرار بده تا این لیست نمایش داده بشه.
+
+### پرامپت ۱۳۲
+در زمان ویرایش نام خطای زیر در کنسول نمایش داده می‌شه:
+
+```js
+Uncaught TypeError: this.peik.renameChat is not a function
+    addChat http://localhost:3000/plugins/presentation/webUI/components/sidebar.js:81
+```
+
+### پرامپت ۱۳۳
+در peik.js متد renameChat اضافه شده ولی از chatManager.renameChat() استفاده می‌کنه که وجود نداره.
+
+لطفاً این متد رو در peik.js تصحیح کن:
+
+async renameChat(chatId, newTitle) {
+    const chat = await this.getChat(chatId);
+    if (chat) {
+        await chat.updateTitle(newTitle);
+    }
+}
+
+این کار مستقیماً از متد updateTitle موجود در کلاس Chat استفاده می‌کنه.

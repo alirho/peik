@@ -59,6 +59,7 @@ html.dark .logo {
     cursor: pointer;
     transition: background-color 0.2s;
     user-select: none;
+    position: relative; /* برای موقعیت‌دهی منو */
 }
 .chat-list-item:hover {
     background-color: var(--hover-light);
@@ -114,6 +115,13 @@ html.dark .chat-item-warning {
     font-size: 0.875rem;
 }
 
+/* Chat Actions Container */
+.chat-actions-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 .actions-button {
     background: transparent;
     border: none;
@@ -132,7 +140,8 @@ html.dark .actions-button {
     color: var(--text-muted-dark);
 }
 .chat-list-item:hover .actions-button,
-.chat-list-item:focus-within .actions-button {
+.chat-list-item:focus-within .actions-button,
+.chat-list-item .actions-menu:not(.hidden) ~ .actions-button {
     opacity: 1;
 }
 .actions-button:hover {
@@ -142,8 +151,11 @@ html.dark .actions-button:hover {
     background-color: rgba(255,255,255,0.1);
 }
 
+/* Dropdown Menu */
 .actions-menu {
     position: absolute;
+    top: 100%;
+    left: 0; /* در حالت RTL، سمت چپ یعنی زیر دکمه */
     background-color: var(--surface-light);
     border: 1px solid var(--border-light);
     border-radius: 0.5rem;
@@ -153,12 +165,13 @@ html.dark .actions-button:hover {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    min-width: 8rem;
+    min-width: 9rem;
 }
 html.dark .actions-menu {
     background-color: var(--surface-dark);
     border-color: var(--border-dark);
 }
+
 .actions-menu-item {
     display: flex;
     align-items: center;
@@ -167,6 +180,15 @@ html.dark .actions-menu {
     border-radius: 0.25rem;
     cursor: pointer;
     font-size: 0.875rem;
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    width: 100%;
+    text-align: right;
+    font-family: var(--font-family);
+}
+html.dark .actions-menu-item {
+    color: var(--text-dark);
 }
 .actions-menu-item:hover {
     background-color: var(--hover-light);
@@ -175,10 +197,16 @@ html.dark .actions-menu-item:hover {
     background-color: var(--hover-dark);
 }
 .actions-menu-item .material-symbols-outlined {
-    font-size: 1rem;
+    font-size: 1.1rem;
 }
-.actions-menu-item.delete {
+.actions-menu-item.delete-btn {
     color: #ef4444;
+}
+.actions-menu-item.delete-btn:hover {
+    background-color: #fef2f2;
+}
+html.dark .actions-menu-item.delete-btn:hover {
+    background-color: rgba(239, 68, 68, 0.1);
 }
 
 .sidebar-footer {

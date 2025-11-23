@@ -111,6 +111,26 @@ export default class Peik extends EventEmitter {
     }
 
     /**
+     * تغییر نام گپ
+     * @param {string} chatId 
+     * @param {string} newTitle 
+     */
+    async renameChat(chatId, newTitle) {
+        const chat = await this.getChat(chatId);
+        if (chat) {
+            await chat.updateTitle(newTitle);
+            
+            // به‌روزرسانی لیست خلاصه چت‌ها
+            const chatIndex = this.chats.findIndex(c => c.id === chatId);
+            if (chatIndex !== -1) {
+                this.chats[chatIndex].title = newTitle;
+                this.chats[chatIndex].updatedAt = Date.now();
+                this.emit('chat:updated', this.chats[chatIndex]);
+            }
+        }
+    }
+
+    /**
      * حذف چت
      * @param {string} chatId 
      */
@@ -140,6 +160,37 @@ export default class Peik extends EventEmitter {
             await storage.saveSettings(this.settings);
         }
         this.emit('settings:updated', this.settings);
+    }
+
+    /**
+     * ذخیره تنظیمات کاربر (نام مستعار برای updateSettings جهت سازگاری با کدهای موجود)
+     * @param {object} settings 
+     */
+    async saveSettings(settings) {
+        return this.updateSettings(settings);
+    }
+
+    /**
+     * بررسی اعتبار تنظیمات
+     * @param {object} settings 
+     */
+    isSettingsValid(settings) {
+        if (!settings || !settings.activeProviderId || !settings.providers) return false;
+        
+        const id = settings.activeProviderId;
+        const providers = settings.providers;
+
+        if (id === 'gemini') {
+            return !!(providers.gemini?.apiKey && providers.gemini?.modelName);
+        }
+        if (id === 'openai') {
+            return !!(providers.openai?.apiKey && providers.openai?.modelName);
+        }
+        if (providers.custom) {
+            const activeCustom = providers.custom.find(p => p.id === id);
+            return !!(activeCustom?.endpointUrl && activeCustom?.modelName);
+        }
+        return false;
     }
 
     /**

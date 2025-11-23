@@ -36,17 +36,23 @@ export default class MessageList {
         const newRaw = currentRaw + chunk;
         bubble.dataset.raw = newRaw;
         
-        // اگر محتوا قبلاً فقط لودینگ بود، پاکش کن
         if (currentRaw === '') {
             bubble.innerHTML = ''; 
         }
 
-        bubble.innerHTML = this._renderContent(newRaw);
+        // به‌روزرسانی متن
+        const contentDiv = bubble.querySelector('.content-text') || bubble;
+        if (bubble.querySelector('.content-text')) {
+             bubble.querySelector('.content-text').innerHTML = this._renderContent(newRaw);
+        } else {
+             // اگر ساختار هنوز ساده است (مثل اولین چانک)، بازسازی کن
+             bubble.innerHTML = this._renderContent(newRaw);
+        }
+        
         this.scrollToBottom();
     }
 
     _createMessageElement(message) {
-        // نگاشت نقش مدل به کلاس CSS مناسب
         const roleClass = message.role === 'model' ? 'assistant' : 'user';
         const labelText = message.role === 'user' ? 'شما' : 'دستیار هوش مصنوعی';
         
@@ -54,36 +60,31 @@ export default class MessageList {
         wrapper.className = `message ${roleClass}`;
         wrapper.dataset.id = message.id;
 
-        // آواتار
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
 
-        // کانتینر محتوا (شامل لیبل و حباب)
         const contentWrapper = document.createElement('div');
         contentWrapper.className = 'message-content';
 
-        // برچسب نام
         const label = document.createElement('p');
         label.className = 'message-label';
         label.textContent = labelText;
 
-        // حباب پیام
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
         
-        // محتوا
         let content = message.content || '';
         bubble.dataset.raw = content;
 
         if (!content && message.role === 'model') {
-            // نشانگر تایپ
-            content = '<div class="typing-indicator"><div class="dot-container"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+            bubble.innerHTML = '<div class="typing-indicator"><div class="dot-container"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
         } else {
-            content = this._renderContent(content);
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'content-text';
+            contentDiv.innerHTML = this._renderContent(content);
+            bubble.appendChild(contentDiv);
         }
-        bubble.innerHTML = content;
 
-        // تصویر (فقط برای کاربر)
         if (message.role === 'user' && message.image) {
             const imgWrapper = document.createElement('div');
             imgWrapper.className = 'message-image-wrapper';
@@ -96,11 +97,37 @@ export default class MessageList {
             bubble.prepend(imgWrapper);
         }
 
+        // اضافه کردن دکمه رونوشت (Copy)
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-button';
+        copyBtn.title = 'رونوشت پیام';
+        copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 1.2rem;">content_copy</span>';
+        
+        copyBtn.addEventListener('click', async () => {
+            const textToCopy = bubble.dataset.raw || '';
+            if (!textToCopy) return;
+
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 1.2rem;">check</span>';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 1.2rem;">content_copy</span>';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+        });
+
         // ترکیب اجزا
         contentWrapper.appendChild(label);
         contentWrapper.appendChild(bubble);
+        
+        // دکمه کپی را به انتهای کانتینر محتوا اضافه می‌کنیم (زیر حباب)
+        contentWrapper.appendChild(copyBtn);
 
-        // چیدمان بر اساس نقش (در RTL: کاربر سمت راست، مدل سمت چپ)
         if (message.role === 'user') {
             wrapper.appendChild(avatar);
             wrapper.appendChild(contentWrapper);
