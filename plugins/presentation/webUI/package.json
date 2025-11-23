@@ -1,0 +1,7 @@
+{
+  "name": "web-ui",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "description": "رابط کاربری وب استاندارد برای پیک"
+}

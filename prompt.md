@@ -1362,3 +1362,40 @@ Node.js v20.9.0
 - لیست افزونه‌های موجود
 
 همه مستندات فارسی باشند و با مثال‌های واضح.
+
+### پرامپت ۱۱۵
+حالا می‌خوام رابط کاربری فعلی (که در js/ui/ و templates/ و styles/ هست) را به یک افزونه مستقل تبدیل کنی. هدف ساخت یک افزونه WebUI در مسیر plugins/presentation/webUI/ است. این افزونه باید:
+- از Plugin ارث‌بری کنه
+- category اش 'presentation' باشه
+- تمام قابلیت‌های UI فعلی رو داشته باشه:
+  - نمایش لیست چت‌ها در Sidebar
+  - نمایش پیام‌ها
+  - کادر ورودی برای ارسال پیام
+  - پشتیبانی از تصویر
+  - مدال تنظیمات
+  - Lightbox برای تصاویر
+  - پشتیبانی از Markdown
+- از هسته Peik استفاده کنه (نه مستقیماً با DOM)
+- از رویدادهای Chat گوش بده (chunk, response:complete, ...)
+- ساختار فایل‌ها مشابه فعلی باشه ولی ماژولار
+- ساختار پیشنهادی:
+```
+plugins/presentation/webUI/
+├── index.js                # افزونه اصلی
+├── components/
+│   ├── sidebar.js
+│   ├── messageList.js
+│   ├── inputArea.js
+│   ├── settingsModal.js
+│   └── lightbox.js
+├── templates/
+│   └── ... (HTML templates)
+├── styles/
+│   └── ... (CSS files)
+└── package.json
+```
+
+از کدهای موجود در js/ui/ و templates/ و styles/ استفاده کن ولی:
+- آن‌ها را ماژولار کن
+- به جای دسترسی مستقیم به chatEngine، از peik و chat استفاده کن
+- از رویدادها برای به‌روزرسانی UI استفاده کن
