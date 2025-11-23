@@ -2,7 +2,7 @@ import Sidebar from './components/sidebar.js';
 import MessageList from './components/messageList.js';
 import InputArea from './components/inputArea.js';
 import SettingsModal from './components/settingsModal.js';
-import { loadTemplateWithPartials, loadTemplate } from '../../../js/ui/templateLoader.js';
+import { loadTemplateWithPartials, loadTemplate } from './utils/templateLoader.js';
 
 export default class UIManager {
     constructor(peik, rootId) {
@@ -33,11 +33,9 @@ export default class UIManager {
         const chats = this.peik.chats || [];
         this.sidebar.render(chats, null);
 
-        // اگر گپی وجود ندارد و تنظیمات پیش‌فرض هم نیست، تنظیمات را باز کن
         if (chats.length === 0 && (!this.peik.config || !this.peik.config.defaultProvider)) {
             this.settingsModal.show(true);
         } else if (chats.length > 0) {
-            // آخرین گپ را باز کن
             const lastChatId = chats[0].id;
             await this.switchChat(lastChatId);
         }
@@ -45,8 +43,8 @@ export default class UIManager {
 
     async renderLayout() {
         const [layoutHtml, modalHtml] = await Promise.all([
-            loadTemplateWithPartials('templates/mainLayout.html'),
-            loadTemplate('templates/settingsModal.html')
+            loadTemplateWithPartials('plugins/presentation/webUI/templates/mainLayout.html'),
+            loadTemplate('plugins/presentation/webUI/templates/settingsModal.html')
         ]);
         this.rootElement.innerHTML = layoutHtml + modalHtml;
     }
@@ -159,7 +157,6 @@ export default class UIManager {
         const dropdown = this.dom.modelSelectorDropdown;
         dropdown.innerHTML = '';
         
-        // ساخت لیست مدل‌ها از تنظیمات
         const settings = this.peik.settings;
         const models = [];
         
@@ -167,7 +164,6 @@ export default class UIManager {
         if (settings?.providers?.openai?.apiKey) models.push({ provider: 'openai', name: 'ChatGPT', modelName: settings.providers.openai.modelName });
         settings?.providers?.custom?.forEach(c => models.push({ provider: 'custom', name: c.name, modelName: c.modelName, id: c.id }));
 
-        // ارائه‌دهنده پیش‌فرض
         if (this.peik.config && this.peik.config.defaultProvider) {
              const def = this.peik.config.defaultProvider;
              models.push({ provider: def.provider, name: def.name || 'پیش‌فرض', modelName: def.modelName, id: 'default' });

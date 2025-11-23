@@ -1,4 +1,4 @@
-import markdownService from '../../../../js/services/markdownService.js';
+import markdownService from '../utils/markdownService.js';
 
 export default class MessageList {
     constructor(container) {

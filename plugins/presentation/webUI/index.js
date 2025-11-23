@@ -25,7 +25,16 @@ export default class WebUIPlugin extends Plugin {
     }
 
     async activate() {
+        this._loadStyles();
         await this.uiManager.init();
         console.log('WebUI فعال شد.');
+    }
+
+    _loadStyles() {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        // مسیر فایل استایل اصلی در داخل افزونه
+        link.href = 'plugins/presentation/webUI/styles/main.css'; 
+        document.head.appendChild(link);
     }
 }

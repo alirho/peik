@@ -33,8 +33,6 @@ const load = () => {
     loadingPromise = new Promise((resolve, reject) => {
         // Check if the library is already available on the window object
         if (window.markdownit) {
-            console.log('markdown-it already available.');
-            // The constructor is typically all lowercase
             parser = new window.markdownit({
                 html: false,
                 breaks: true,
@@ -45,6 +43,7 @@ const load = () => {
         }
 
         const script = document.createElement('script');
+        // This path remains relative to the root index.html
         script.src = 'js/lib/markdown-it.min.js';
         script.async = true;
 
@@ -57,7 +56,6 @@ const load = () => {
                     linkify: true,
                     typographer: true,
                 });
-                console.log('markdown-it library loaded successfully via script tag.');
                 resolve(parser);
             } else {
                 reject(new Error('markdown-it script loaded, but `window.markdownit` is not defined.'));

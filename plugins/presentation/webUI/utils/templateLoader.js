@@ -1,4 +1,4 @@
-import { TemplateLoadError } from '../utils/customErrors.js';
+import { TemplateLoadError } from '../../../../js/utils/customErrors.js';
 
 /**
  * یک قالب HTML را از مسیر داده شده بارگذاری می‌کند.
@@ -31,18 +31,17 @@ export async function loadTemplateWithPartials(path) {
     const partialRegex = /{{\s*>\s*([a-zA-Z0-9_]+)\s*}}/g;
     const partialsToLoad = new Set();
     
-    // از String.prototype.matchAll برای پیدا کردن همه مطابقت‌ها در یک حرکت استفاده کن.
-    // Set به طور خودکار از تکراری بودن جلوگیری می‌کند.
     for (const match of mainTemplateContent.matchAll(partialRegex)) {
         partialsToLoad.add(match[1]);
     }
 
     if (partialsToLoad.size === 0) {
-        return mainTemplateContent; // هیچ partialی یافت نشد، همانطور که هست برگردان.
+        return mainTemplateContent;
     }
 
+    // مسیر partials نسبت به ریشه سرور تنظیم شده است تا با ساختار جدید افزونه هماهنگ باشد
     const partialPromises = Array.from(partialsToLoad).map(name =>
-        loadTemplate(`templates/partials/${name}.html`).then(content => ({ name, content }))
+        loadTemplate(`plugins/presentation/webUI/templates/partials/${name}.html`).then(content => ({ name, content }))
     );
 
     const loadedPartials = await Promise.all(partialPromises);
@@ -52,8 +51,7 @@ export async function loadTemplateWithPartials(path) {
         return acc;
     }, {});
 
-    // تمام ocorrências هر placeholder partial را جایگزین کن.
     return mainTemplateContent.replace(partialRegex, (match, partialName) => {
-        return partialsMap[partialName] || ''; // اگر partial یافت نشد، رشته خالی برگردان
+        return partialsMap[partialName] || '';
     });
 }

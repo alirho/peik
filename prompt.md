@@ -1399,3 +1399,15 @@ plugins/presentation/webUI/
 - آن‌ها را ماژولار کن
 - به جای دسترسی مستقیم به chatEngine، از peik و chat استفاده کن
 - از رویدادها برای به‌روزرسانی UI استفاده کن
+
+### پرامپت ۱۱۶
+می‌خوام فایل‌هایی که WebUI بهشون وابستگی داره رو به پوشه افزونه منتقل کنی:
+1. فایل templateLoader.js را از js/ui/ به plugins/presentation/webUI/utils/ انتقال بده
+2. فایل markdownService.js را از js/services/ به plugins/presentation/webUI/utils/ انتقال بده
+3. تمام فایل‌های templates/ را به plugins/presentation/webUI/templates/ انتقال بده
+4. تمام فایل‌های styles/ را به plugins/presentation/webUI/styles/ انتقال بده
+5. در فایل‌های WebUI، import ها را به مسیرهای جدید تغییر بده
+6. یک فایل index.html جدید در ریشه پروژه بساز که:
+   - فقط یک div با id="root" داشته باشه
+   - هسته و افزونه‌ها رو import کنه
+   - WebUI رو راه‌اندازی کنه
