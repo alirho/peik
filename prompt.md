@@ -1935,3 +1935,15 @@ transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
     - در جاهایی که از `this.activeChat` استفاده می‌شود:
        - اگر فقط `id` لازم است، از `this.activeChatId` استفاده کن
        - اگر کل object لازم است، از `await this.peik.getChat(this.activeChatId)` استفاده کن
+
+### پرامپت ۱۵۲
+هر بار که `loadTemplate` یا `loadTemplateWithPartials` فراخوانی می‌شه، یک درخواست fetch جدید به سرور ارسال می‌شه. این باعث کندی و هدر رفت Network می‌شه.
+1. یک `Map` به نام `templateCache` در ابتدای فایل بساز (خارج از function ها)
+2. در تابع `loadTemplate`:
+   - قبل از fetch، چک کن آیا `path` در cache موجود است
+   - اگر موجود است، محتوای cached را برگردان
+   - اگر موجود نیست، fetch کن و بعد از دریافت، در cache ذخیره کن
+   - سپس محتوا را برگردان
+3. یک تابع export شده به نام `clearTemplateCache` اضافه کن که:
+   - تمام محتویات `templateCache` را پاک کند
+   - این تابع برای debugging یا reload مفید است.
