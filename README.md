@@ -1,6 +1,6 @@
 # پیک (Peik)
 
-![پیک](https://img.shields.io/badge/Peik-v0.8.0-blue)
+![پیک](https://img.shields.io/badge/Peik-v0.9.0-blue)
 ![معماری](https://img.shields.io/badge/Architecture-Plugin--Based-orange)
 ![زبان](https://img.shields.io/badge/Language-Persian-green)
 ![مجوز](https://img.shields.io/badge/License-MIT-yellow)
