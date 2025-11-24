@@ -90,7 +90,9 @@ export default class InputArea {
         
         if (!text && !this.currentImage) return;
 
-        const chat = this.peik.activeChat;
+        // استفاده از activeChat موجود در UIManager
+        const chat = this.uiManager.activeChat;
+        
         if (!chat) {
             alert('لطفاً ابتدا یک گپ ایجاد کنید.');
             return;

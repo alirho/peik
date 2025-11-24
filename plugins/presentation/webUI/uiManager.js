@@ -16,6 +16,8 @@ export default class UIManager {
         this.settingsModal = null;
         this.lightboxManager = null;
         
+        // مدیریت گپ فعال در لایه UI (چون هسته Stateless شده است)
+        this.activeChat = null;
         this.activeChatListeners = {};
     }
 
@@ -78,14 +80,17 @@ export default class UIManager {
 
         this.peik.on('chat:updated', (chat) => {
             this.sidebar.updateChat(chat);
-            if (this.peik.activeChat && this.peik.activeChat.id === chat.id) {
-                this.updateHeader(this.peik.activeChat);
+            // اگر گپِ به‌روز شده همان گپ فعال است، هدر را آپدیت کن
+            if (this.activeChat && this.activeChat.id === chat.id) {
+                this.updateHeader(chat);
             }
         });
 
         this.peik.on('chat:deleted', (chatId) => {
             this.sidebar.removeChat(chatId);
-            if (this.peik.activeChat && this.peik.activeChat.id === chatId) {
+            if (this.activeChat && this.activeChat.id === chatId) {
+                this._unbindActiveChatEvents();
+                this.activeChat = null;
                 this.messageList.clear();
                 this.updateHeader(null);
             }
@@ -94,9 +99,9 @@ export default class UIManager {
         this.peik.on('settings:updated', () => {
             alert('تنظیمات ذخیره شد.');
             this.settingsModal.show(false);
-            if (this.peik.activeChat) {
-                this.updateHeader(this.peik.activeChat);
-                this.sidebar.updateChat(this.peik.activeChat);
+            if (this.activeChat) {
+                this.updateHeader(this.activeChat);
+                this.sidebar.updateChat(this.activeChat);
             }
         });
         
@@ -131,10 +136,16 @@ export default class UIManager {
     }
 
     async switchChat(chatId) {
+        // اگر گپ درخواستی همین الان فعال است، کاری نکن
+        if (this.activeChat && this.activeChat.id === chatId) return;
+
         const chat = await this.peik.getChat(chatId);
         if (!chat) return;
 
         this._unbindActiveChatEvents();
+
+        // ذخیره گپ فعال در UIManager
+        this.activeChat = chat;
 
         this.sidebar.setActive(chatId);
         this.messageList.renderHistory(chat.messages);
@@ -220,7 +231,7 @@ export default class UIManager {
         const onMessage = (msg) => this.messageList.appendMessage(msg);
         const onChunk = ({ messageId, chunk }) => this.messageList.appendChunk(messageId, chunk);
         const onComplete = () => this.inputArea.setLoading(false);
-        const onSending = () => this.inputArea.setLoading(true);
+        const onReceiving = () => this.inputArea.setLoading(true);
         const onUpdate = (updatedChat) => {
             this.updateHeader(updatedChat);
             this.sidebar.updateChat(updatedChat);
@@ -231,10 +242,10 @@ export default class UIManager {
         };
 
         this.activeChatListeners = {
-            message: onMessage,
+            'message:sent': onMessage,
             chunk: onChunk,
             'response:complete': onComplete,
-            sending: onSending,
+            'response:receiving': onReceiving,
             update: onUpdate,
             error: onError
         };
@@ -243,8 +254,8 @@ export default class UIManager {
     }
 
     _unbindActiveChatEvents() {
-        const chat = this.peik.activeChat;
-        if (!chat || !this.activeChatListeners.message) return;
+        const chat = this.activeChat;
+        if (!chat || !this.activeChatListeners['message:sent']) return;
 
         Object.entries(this.activeChatListeners).forEach(([evt, fn]) => chat.off(evt, fn));
         this.activeChatListeners = {};
