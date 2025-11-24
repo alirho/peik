@@ -32,6 +32,7 @@ export default class Chat extends EventEmitter {
     _getRuntimeState() {
         let state = this.peik.chatRuntimeStates.get(this.id);
         if (!state) {
+            console.warn(`⚠️ Runtime state برای چت ${this.id} وجود نداشت. ایجاد می‌شود.`);
             // ایجاد وضعیت پیش‌فرض اگر وجود نداشته باشد (Safety net)
             state = { isSending: false, abortController: null };
             this.peik.chatRuntimeStates.set(this.id, state);
@@ -150,7 +151,6 @@ export default class Chat extends EventEmitter {
         const runtimeState = this._getRuntimeState();
         if (runtimeState.isSending && runtimeState.abortController) {
             runtimeState.abortController.abort();
-            runtimeState.isSending = false;
         }
     }
 

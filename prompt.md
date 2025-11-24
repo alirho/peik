@@ -1759,3 +1759,8 @@ localhost:3000
     - رویداد `sending` فعلی را به `response:receiving` تغییر نام بده (چون مربوط به شروع دریافت پاسخ از مدل است)
     - همه emit ها باید async باقی بمانند (با await)
 > پرامپت بالا از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.
+
+### پرامپت ۱۴۳
+دو تغییر زیر را در فایل `Chat.js` انجام بده:
+1. در متد `cancel()`، خط `runtimeState.isSending = false;` را حذف کن. فقط `abort()` فراخوانی شود، چون `isSending` در بلوک `finally` متد `sendMessage` تنظیم می‌شود.
+2. در متد `_getRuntimeState()`، قبل از خط `state = { isSending: false, abortController: null };` یک `console.warn` اضافه کن که بگوید: `⚠️ Runtime state برای چت ${this.id} وجود نداشت. ایجاد می‌شود.`
