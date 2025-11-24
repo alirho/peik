@@ -2,16 +2,14 @@ import { Plugin } from '../../../core/src/index.js';
 import UIManager from './uiManager.js';
 
 export default class WebUIPlugin extends Plugin {
-    static get metadata() {
-        return {
-            name: 'web-ui',
-            version: '1.0.0',
-            category: 'presentation',
-            description: 'رابط کاربری وب استاندارد',
-            author: 'Peik Team',
-            dependencies: [] 
-        };
-    }
+    static metadata = {
+        name: 'web-ui',
+        version: '1.0.0',
+        category: 'presentation',
+        description: 'رابط کاربری وب استاندارد',
+        author: 'Peik Team',
+        dependencies: [] 
+    };
 
     constructor(rootElementId = 'root') {
         super();
@@ -36,7 +34,6 @@ export default class WebUIPlugin extends Plugin {
             this.uiManager = null;
         }
 
-        // Remove CSS link
         const styleLink = document.querySelector('link[href*="webUI/styles/main.css"]');
         if (styleLink) {
             styleLink.remove();
@@ -46,7 +43,6 @@ export default class WebUIPlugin extends Plugin {
     }
 
     _loadStyles() {
-        // Prevent duplicate loading
         if (document.querySelector('link[href*="webUI/styles/main.css"]')) return;
 
         const link = document.createElement('link');

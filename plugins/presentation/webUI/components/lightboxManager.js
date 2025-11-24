@@ -1,14 +1,18 @@
-export default class LightboxManager {
-    constructor() {
+import Component from '../component.js';
+
+export default class LightboxManager extends Component {
+    constructor(peik, uiManager) {
+        super(peik, uiManager);
+        this.hideBound = this.hide.bind(this);
+        this.handleKeyDownBound = this.handleKeyDown.bind(this);
+    }
+
+    async init() {
         this.dom = {
             lightbox: document.getElementById('image-lightbox'),
             image: document.getElementById('lightbox-image'),
             closeBtn: document.getElementById('lightbox-close-button')
         };
-
-        this.hideBound = this.hide.bind(this);
-        this.handleKeyDownBound = this.handleKeyDown.bind(this);
-        
         this.bindEvents();
     }
 
@@ -53,5 +57,6 @@ export default class LightboxManager {
         if (this.dom.closeBtn) {
             this.dom.closeBtn.removeEventListener('click', this.hideBound);
         }
+        this.dom = {};
     }
 }

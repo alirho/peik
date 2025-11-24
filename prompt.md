@@ -2001,4 +2001,17 @@ transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
 4. Cleanup در destroy، در متد `destroy`:
     - تمام event listener های اضافه شده را remove کن (bound method ها را استفاده کن)
 
-> پرامپت‌های ۱۴۸ تا ۱۵۴ از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.
+### پرامپت ۱۵۵
+بخش UIManager خیلی پیچیده شده. باید ساده‌تر باشه، در حال حاضر:
+- UIManager همه Component ها را مستقیماً می‌سازه
+- نمی‌شه Component جدید از بیرون اضافه کرد
+- برای هر تغییر باید UIManager را ویرایش کرد
+
+**هدف:**
+- UIManager فقط یک هماهنگ‌کننده ساده باشه
+- Component ها خودشان را register کنن
+- بشه Component جدید اضافه کرد بدون تغییر UIManager
+
+**نکته:** سازگاری با نسخه قبل مهم نیست، می‌تونی هر تغییری لازمه بدی.
+
+> پرامپت‌های ۱۴۸ تا ۱۵۵ از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.

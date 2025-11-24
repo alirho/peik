@@ -1,16 +1,73 @@
+import Component from '../component.js';
 import markdownService from '../utils/markdownService.js';
 
-export default class MessageList {
-    constructor(container, lightboxManager) {
-        this.container = container;
-        this.lightboxManager = lightboxManager;
+export default class MessageList extends Component {
+    constructor(peik, uiManager) {
+        super(peik, uiManager);
+        this.container = null;
         this.unprocessedMessages = new Set();
+        this.activeChat = null;
 
+        // Bind handlers
+        this.handleMessageSent = this.handleMessageSent.bind(this);
+        this.handleChunk = this.handleChunk.bind(this);
+        this.handleCoreError = this.handleCoreError.bind(this);
+    }
+
+    async init() {
+        this.container = document.getElementById('message-list');
+        
         // شروع بارگذاری سرویس مارک‌داون
         markdownService.load().then(() => {
             this.rerenderUnprocessedMessages();
         });
+
+        // گوش دادن به خطاهای کلی برای نمایش
+        this.peik.on('error', this.handleCoreError);
     }
+
+    /**
+     * وقتی چت تغییر می‌کند، باید لیسنرهای چت قبلی را حذف و به چت جدید متصل شویم.
+     */
+    onChatChanged(newChat, oldChat) {
+        if (oldChat) {
+            this._unbindChatEvents(oldChat);
+        }
+
+        this.clear();
+        this.activeChat = newChat;
+
+        if (newChat) {
+            this.renderHistory(newChat.messages);
+            this._bindChatEvents(newChat);
+        }
+    }
+
+    _bindChatEvents(chat) {
+        chat.on('message:sent', this.handleMessageSent);
+        chat.on('chunk', this.handleChunk);
+    }
+
+    _unbindChatEvents(chat) {
+        chat.off('message:sent', this.handleMessageSent);
+        chat.off('chunk', this.handleChunk);
+    }
+
+    // --- Event Handlers ---
+
+    handleMessageSent(msg) {
+        this.appendMessage(msg);
+    }
+
+    handleChunk({ messageId, chunk }) {
+        this.appendChunk(messageId, chunk);
+    }
+
+    handleCoreError(err) {
+        this.displayTemporaryError(err.message || err.toString());
+    }
+
+    // --- Rendering Logic ---
 
     clear() {
         if (this.container) {
@@ -20,7 +77,6 @@ export default class MessageList {
     }
 
     renderHistory(messages) {
-        this.clear();
         if (messages) {
             messages.forEach(msg => this.appendMessage(msg));
         }
@@ -63,6 +119,7 @@ export default class MessageList {
         target.innerHTML = this._renderContent(newRaw);
         
         if (!markdownService.isLoaded()) {
+            bubble.dataset.needsMarkdown = 'true';
             this.unprocessedMessages.add(bubble);
         }
         
@@ -100,6 +157,10 @@ export default class MessageList {
             contentDiv.className = 'content-text';
             contentDiv.innerHTML = this._renderContent(content);
             bubble.appendChild(contentDiv);
+
+            if (!markdownService.isLoaded()) {
+                bubble.dataset.needsMarkdown = 'true';
+            }
         }
 
         if (message.role === 'user' && message.image) {
@@ -110,10 +171,12 @@ export default class MessageList {
             img.src = `data:${message.image.mimeType};base64,${message.image.data}`;
             img.className = 'message-image';
             
-            if (this.lightboxManager) {
+            // دریافت لایت‌باکس از UIManager (روش جدید)
+            const lightbox = this.uiManager.getComponent('lightbox');
+            if (lightbox) {
                 img.style.cursor = 'zoom-in';
                 img.addEventListener('click', () => {
-                    this.lightboxManager.show(img.src);
+                    lightbox.show(img.src);
                 });
             }
 
@@ -164,17 +227,17 @@ export default class MessageList {
     }
 
     rerenderUnprocessedMessages() {
-        if (!markdownService.isLoaded()) return;
+        if (!markdownService.isLoaded() || !this.container) return;
 
-        // استفاده از Set برای رندر فقط پیام‌های پردازش نشده بدون کوئری زدن به DOM
-        this.unprocessedMessages.forEach(bubble => {
+        const bubbles = this.container.querySelectorAll('[data-needs-markdown="true"]');
+        bubbles.forEach(bubble => {
             const raw = bubble.dataset.raw;
             if (raw) {
                 const target = bubble.querySelector('.content-text') || bubble;
                 target.innerHTML = markdownService.render(raw);
+                delete bubble.dataset.needsMarkdown;
             }
         });
-        this.unprocessedMessages.clear();
     }
 
     scrollToBottom() {
@@ -194,12 +257,11 @@ export default class MessageList {
     }
 
     destroy() {
+        if (this.activeChat) {
+            this._unbindChatEvents(this.activeChat);
+        }
+        this.peik.off('error', this.handleCoreError);
         this.clear();
         this.container = null;
-        this.lightboxManager = null;
-        if (this.unprocessedMessages) {
-            this.unprocessedMessages.clear();
-            this.unprocessedMessages = null;
-        }
     }
 }

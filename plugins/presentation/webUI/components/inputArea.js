@@ -1,23 +1,29 @@
-export default class InputArea {
+import Component from '../component.js';
+
+export default class InputArea extends Component {
     constructor(peik, uiManager) {
-        this.peik = peik;
-        this.uiManager = uiManager;
-        
-        this.form = document.getElementById('chat-form');
-        this.input = document.getElementById('message-input');
-        this.sendBtn = document.getElementById('send-button');
-        
-        this.attachBtn = document.getElementById('attach-file-button');
-        this.fileInput = document.getElementById('file-input');
-        this.previewContainer = document.getElementById('image-preview-container');
-        
+        super(peik, uiManager);
         this.currentImage = null; 
+        this.activeChat = null;
 
         // Bind handlers
         this.handleSubmit = this.handleSubmit.bind(this);
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleAttachClick = this.handleAttachClick.bind(this);
         this.handleFileChange = this.handleFileChange.bind(this);
+        
+        this.handleResponseReceiving = this.handleResponseReceiving.bind(this);
+        this.handleResponseComplete = this.handleResponseComplete.bind(this);
+        this.handleChatError = this.handleChatError.bind(this);
+    }
+
+    async init() {
+        this.form = document.getElementById('chat-form');
+        this.input = document.getElementById('message-input');
+        this.sendBtn = document.getElementById('send-button');
+        this.attachBtn = document.getElementById('attach-file-button');
+        this.fileInput = document.getElementById('file-input');
+        this.previewContainer = document.getElementById('image-preview-container');
 
         this.bindEvents();
     }
@@ -27,6 +33,39 @@ export default class InputArea {
         if (this.input) this.input.addEventListener('keydown', this.handleKeyDown);
         if (this.attachBtn) this.attachBtn.addEventListener('click', this.handleAttachClick);
         if (this.fileInput) this.fileInput.addEventListener('change', this.handleFileChange);
+    }
+
+    onChatChanged(newChat, oldChat) {
+        if (oldChat) {
+            oldChat.off('response:receiving', this.handleResponseReceiving);
+            oldChat.off('response:complete', this.handleResponseComplete);
+            oldChat.off('error', this.handleChatError);
+        }
+
+        this.activeChat = newChat;
+
+        if (newChat) {
+            newChat.on('response:receiving', this.handleResponseReceiving);
+            newChat.on('response:complete', this.handleResponseComplete);
+            newChat.on('error', this.handleChatError);
+            // اگر چت در حال ارسال است، وضعیت لودینگ را تنظیم کن (با استفاده از Runtime State اگر در دسترس باشد)
+            // فعلاً فرض بر این است که هنگام سوییچ وضعیت ریست می‌شود یا از طریق رویداد دریافت می‌شود.
+            this.setLoading(false);
+        } else {
+            this.setLoading(false);
+        }
+    }
+
+    handleResponseReceiving() {
+        this.setLoading(true);
+    }
+
+    handleResponseComplete() {
+        this.setLoading(false);
+    }
+
+    handleChatError() {
+        this.setLoading(false);
     }
 
     handleSubmit(e) {
@@ -101,17 +140,10 @@ export default class InputArea {
         
         if (!text && !this.currentImage) return;
 
-        // Use activeChatId from UIManager
-        const chatId = this.uiManager.activeChatId;
-        
-        if (!chatId) {
+        if (!this.activeChat) {
             alert('لطفاً ابتدا یک گپ ایجاد کنید.');
             return;
         }
-
-        // Fetch the chat instance from core
-        const chat = await this.peik.getChat(chatId);
-        if (!chat) return;
 
         const msgText = text;
         const msgImage = this.currentImage;
@@ -120,10 +152,10 @@ export default class InputArea {
         this.clearImage();
         
         try {
-            await chat.sendMessage(msgText, msgImage);
+            await this.activeChat.sendMessage(msgText, msgImage);
         } catch (err) {
             console.error(err);
-            this.input.value = msgText;
+            this.input.value = msgText; // بازگرداندن متن در صورت خطا
         }
     }
 
@@ -137,9 +169,18 @@ export default class InputArea {
         if (this.attachBtn) {
             this.attachBtn.disabled = isLoading;
         }
+        if (this.input) {
+            this.input.disabled = isLoading;
+        }
     }
 
     destroy() {
+        if (this.activeChat) {
+            this.activeChat.off('response:receiving', this.handleResponseReceiving);
+            this.activeChat.off('response:complete', this.handleResponseComplete);
+            this.activeChat.off('error', this.handleChatError);
+        }
+
         if (this.form) this.form.removeEventListener('submit', this.handleSubmit);
         if (this.input) this.input.removeEventListener('keydown', this.handleKeyDown);
         if (this.attachBtn) this.attachBtn.removeEventListener('click', this.handleAttachClick);
@@ -151,7 +192,5 @@ export default class InputArea {
         this.attachBtn = null;
         this.fileInput = null;
         this.previewContainer = null;
-        this.peik = null;
-        this.uiManager = null;
     }
 }
