@@ -1805,4 +1805,25 @@ localhost:3000
 
 **نکته:** این تغییر باعث می‌شود هر بار `getChat` فراخوانی بشه، یک instance جدید ساخته بشه. اگر نیاز به cache باشه، بعداً می‌توان یک سیستم cache اختصاصی اضافه کرد.
 
-> پرامپت‌های ۱۴۲ تا ۱۴۴ از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.
+### پرامپت ۱۴۵
+فایل `peik.js` خیلی بزرگ شده (۳۰۰ خط). می‌خوام تقسیمش کنی به فایل‌های کوچک‌تر.
+1. چهار فایل جدید بساز
+    - فایل `core/src/services/providerResolver.js`: پیدا کردن Provider مناسب و تنظیمات مدل
+        - چی داخلش باشه: متدهای `getProvider`، `resolveProviderConfig` و `getDefaultModelInfo` از peik.js
+    - فایل `core/src/services/modelInfoHelper.js`: تبدیل اطلاعات فنی مدل به اطلاعات قابل نمایش
+        - چی داخلش باشه: متد `getModelDisplayInfo` از peik.js
+    - فایل `core/src/managers/settingsManager.js`: مدیریت کامل تنظیمات
+      -  چی داخلش باشه: متدهای `updateSettings`، `saveSettings`، `isSettingsValid` از peik.js + قسمت بارگذاری تنظیمات از Storage
+    - فایل `core/src/managers/chatManager.js`: مدیریت کامل چت‌ها
+        - چی داخلش باشه: متدهای `createChat`، `getChat`، `deleteChat`، `renameChat` از peik.js + لیست `chats` و `chatRuntimeStates`
+2. فایل `peik.js` رو **بازنویسی کامل** کن:
+    - ساخت manager ها و service ها در constructor
+    - متد `use()` برای افزونه‌ها
+    - متد `init()` که manager ها رو راه‌اندازی می‌کنه
+    - متد `getStorage()`
+    - متدهای کوچیک که فقط کار manager ها رو صدا می‌زنن (مثلاً `createChat` صدا بزنه `chatManager.createChat`)
+
+**نکته:** دیگه لازم نیست با نسخه قبل سازگار باشه، می‌تونی هر تغییری که لازمه بدی.
+3. به‌روزرسانی `index.js`: فایل‌های جدید رو هم export کن تا بشه استفاده کرد.
+
+> پرامپت‌های ۱۴۲ تا ۱۴۵ از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.

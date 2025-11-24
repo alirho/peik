@@ -3,6 +3,14 @@ import Chat from './chat.js';
 import Plugin from './plugin.js';
 import EventEmitter from './eventEmitter.js';
 
+// Managers
+import ChatManager from './managers/chatManager.js';
+import SettingsManager from './managers/settingsManager.js';
+
+// Services
+import ProviderResolver from './services/providerResolver.js';
+import ModelInfoHelper from './services/modelInfoHelper.js';
+
 // Interfaces
 import StorageInterface from './interfaces/storageInterface.js';
 import HttpClientInterface from './interfaces/httpClientInterface.js';
@@ -18,6 +26,10 @@ export {
     Chat,
     Plugin,
     EventEmitter,
+    ChatManager,
+    SettingsManager,
+    ProviderResolver,
+    ModelInfoHelper,
     StorageInterface,
     HttpClientInterface,
     ProviderInterface,
