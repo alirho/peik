@@ -1758,9 +1758,51 @@ localhost:3000
     - خط `await this.emit('message', modelMsg);` را حذف کن
     - رویداد `sending` فعلی را به `response:receiving` تغییر نام بده (چون مربوط به شروع دریافت پاسخ از مدل است)
     - همه emit ها باید async باقی بمانند (با await)
-> پرامپت بالا از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.
 
 ### پرامپت ۱۴۳
 دو تغییر زیر را در فایل `Chat.js` انجام بده:
 1. در متد `cancel()`، خط `runtimeState.isSending = false;` را حذف کن. فقط `abort()` فراخوانی شود، چون `isSending` در بلوک `finally` متد `sendMessage` تنظیم می‌شود.
 2. در متد `_getRuntimeState()`، قبل از خط `state = { isSending: false, abortController: null };` یک `console.warn` اضافه کن که بگوید: `⚠️ Runtime state برای چت ${this.id} وجود نداشت. ایجاد می‌شود.`
+
+### پرامپت ۱۴۴
+چهار بهبود زیر را در کدهای هسته پیک انجام بده:
+1. بهبود مدیریت خطا در EventEmitter: در فایل `EventEmitter.js`، وقتی یک listener خطا می‌دهد، فقط در console نمایش داده می‌شود و گم می‌شود.
+    - در متد `emit`، اگر listener ها خطا دادند، علاوه بر `console.error`، یک رویداد به نام `error` هم emit کن
+    - اما مراقب باش که اگر خود رویداد `error` خطا داد، وارد حلقه بی‌نهایت نشویم
+    - برای جلوگیری از این مشکل: اگر `eventName` برابر با `'error'` بود، فقط `console.error` کن و رویداد دیگری emit نکن
+    - در غیر این صورت، هم `console.error` کن هم `this.emit('error', error)` را فراخوانی کن
+2. اضافه کردن متد export به Chat: متد `toJSON` فقط برای ذخیره‌سازی داخلی است و فرمت استاندارد Export ندارد.
+    - یک متد جدید به نام `export()` در کلاس `Chat` بساز
+    - این متد باید یک object با ساختار زیر برگرداند:
+      - `version`: رشته `"1.0.0"`
+      - `type`: رشته `"chat"`
+      - `exportedAt`: زمان فعلی به فرمت ISO string (استفاده از `new Date().toISOString()`)
+      - `data`: یک object شامل:
+        - `chat`: خروجی متد `toJSON` بدون فیلد `messages`
+        - `messages`: آرایه `this.messages`
+    - از `Serializer.clone` برای اطمینان از سریال‌سازی صحیح استفاده کن
+3. تغییر نوع metadata در Plugin: در فایل `Plugin.js`، از `static get metadata()` استفاده شده که هر بار یک object جدید می‌سازد.
+    - `static get metadata()` را حذف کن
+    - به جای آن، یک property استاتیک معمولی به نام `metadata` تعریف کن:
+    ```
+    static metadata = {
+        name: 'unnamed-plugin',
+        version: '0.0.0',
+        category: 'utility',
+        description: '',
+        dependencies: []
+    };
+    ```
+    - دقیقاً همان مقادیر قبلی را داشته باشد، فقط از `get` استفاده نکن
+4. حذف activeChat از Peik: فیلد `activeChat` در کلاس `Peik` باعث می‌شود اگر چند UI مختلف از یک نمونه Peik استفاده کنند، با هم تداخل داشته باشند.
+    - فیلد `this.activeChat = null;` را از constructor کلاس `Peik` حذف کن
+    - در متد `getChat`:
+      - خط‌هایی که چک می‌کردند `this.activeChat` همان `chatId` است یا نه را حذف کن
+      - همیشه از storage بخوان و یک نمونه جدید `Chat` بساز
+      - خط `this.activeChat = chatInstance;` را حذف کن
+    - در متد `deleteChat`:
+      - خط‌هایی که `this.activeChat` را `null` می‌کردند حذف کن
+
+**نکته:** این تغییر باعث می‌شود هر بار `getChat` فراخوانی بشه، یک instance جدید ساخته بشه. اگر نیاز به cache باشه، بعداً می‌توان یک سیستم cache اختصاصی اضافه کرد.
+
+> پرامپت‌های ۱۴۲ تا ۱۴۴ از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.

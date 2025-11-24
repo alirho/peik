@@ -13,7 +13,8 @@ export default class Peik extends EventEmitter {
         this.pluginManager = new PluginManager(this);
         
         this.chats = []; // لیستی از خلاصه چت‌ها (بدون پیام)
-        this.activeChat = null;
+        
+        // activeChat حذف شد تا هسته بدون وضعیت (Stateless) باشد
 
         // نگهداری وضعیت Runtime چت‌ها (غیر قابل سریال‌سازی)
         // Key: chatId, Value: { isSending: boolean, abortController: AbortController }
@@ -120,11 +121,6 @@ export default class Peik extends EventEmitter {
      * @returns {Promise<Chat>}
      */
     async getChat(chatId) {
-        // اگر چت فعال فعلی همان است، آن را برگردان
-        if (this.activeChat && this.activeChat.id === chatId) {
-            return this.activeChat;
-        }
-
         const storage = this.getStorage();
         if (!storage) throw new StorageError('ذخیره‌سازی در دسترس نیست.');
 
@@ -136,8 +132,8 @@ export default class Peik extends EventEmitter {
             this.chatRuntimeStates.set(chatId, { isSending: false, abortController: null });
         }
 
+        // همیشه یک نمونه جدید می‌سازیم (Cache حذف شد)
         const chatInstance = new Chat(this, chatData);
-        this.activeChat = chatInstance;
         return chatInstance;
     }
 
@@ -175,10 +171,6 @@ export default class Peik extends EventEmitter {
         
         // پاک کردن وضعیت Runtime
         this.chatRuntimeStates.delete(chatId);
-        
-        if (this.activeChat && this.activeChat.id === chatId) {
-            this.activeChat = null;
-        }
         
         this.emit('chat:deleted', chatId);
     }

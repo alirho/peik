@@ -1,15 +1,13 @@
 import { NotImplementedError } from './utils/errors.js';
 
 export default class Plugin {
-    static get metadata() {
-        return {
-            name: 'unnamed-plugin',
-            version: '0.0.0',
-            category: 'utility', // utility, provider, storage, network
-            description: '',
-            dependencies: []
-        };
-    }
+    static metadata = {
+        name: 'unnamed-plugin',
+        version: '0.0.0',
+        category: 'utility', // utility, provider, storage, network
+        description: '',
+        dependencies: []
+    };
 
     constructor() {
         this.context = null; // Context (Peik instance) will be injected

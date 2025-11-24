@@ -152,6 +152,7 @@ export default class Chat extends EventEmitter {
         if (runtimeState.isSending && runtimeState.abortController) {
             runtimeState.abortController.abort();
         }
+        // isSending در finally متد sendMessage ریست می‌شود
     }
 
     /**
@@ -196,6 +197,27 @@ export default class Chat extends EventEmitter {
             modelInfo: this.modelInfo,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt
+        });
+    }
+
+    /**
+     * خروجی استاندارد برای اکسپورت گرفتن از چت
+     */
+    export() {
+        // دریافت داده‌های پایه
+        const fullData = this.toJSON();
+        
+        // جداسازی پیام‌ها از بدنه اصلی آبجکت چت برای ساختار درخواستی
+        const { messages, ...chatMetadata } = fullData;
+
+        return Serializer.clone({
+            version: "1.0.0",
+            type: "chat",
+            exportedAt: new Date().toISOString(),
+            data: {
+                chat: chatMetadata,
+                messages: this.messages // استفاده از آرایه پیام‌های جاری
+            }
         });
     }
 }

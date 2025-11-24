@@ -46,6 +46,10 @@ export default class EventEmitter {
                 await listener(data);
             } catch (error) {
                 console.error(`خطا در شنونده رویداد "${eventName}":`, error);
+                // جلوگیری از حلقه بی‌نهایت: اگر خطا در رویداد error رخ داد، دیگر emit نکن
+                if (eventName !== 'error') {
+                    this.emit('error', error);
+                }
             }
         }));
     }
