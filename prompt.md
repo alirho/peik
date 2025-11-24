@@ -1947,3 +1947,24 @@ transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
 3. یک تابع export شده به نام `clearTemplateCache` اضافه کن که:
    - تمام محتویات `templateCache` را پاک کند
    - این تابع برای debugging یا reload مفید است.
+
+### پرامپت ۱۵۳
+وقتی `markdownService` بارگذاری می‌شه، متد `rerenderUnprocessedMessages()` **تمام** پیام‌های موجود در DOM را دوباره render می‌کنه. اگر 100 پیام وجود داشته باشه، همه 100 پیام پردازش می‌شن که باعث lag می‌شه.
+1. در `constructor`:
+   - یک `Set` به نام `unprocessedMessages` اضافه کن که reference به bubble های پردازش نشده را نگه دارد
+2. در متد `appendMessage`:
+   - اگر `markdownService.isLoaded()` برابر `false` است، `bubble` را به `unprocessedMessages` اضافه کن
+3. در متد `appendChunk`:
+   - اگر `markdownService.isLoaded()` برابر `false` است و bubble تازه ساخته شد، آن را به `unprocessedMessages` اضافه کن
+4. در متد `rerenderUnprocessedMessages`:
+   - به جای `querySelectorAll('[data-needs-markdown="true"]')` که کل DOM را جستجو می‌کند
+   - از `this.unprocessedMessages` استفاده کن
+   - هر bubble را پردازش کن
+   - بعد از پردازش، `this.unprocessedMessages.clear()` کن
+5. در متد `clear`:
+   - `this.unprocessedMessages.clear()` را هم فراخوانی کن
+6. در متد `destroy`:
+   - `this.unprocessedMessages.clear()` را فراخوانی کن
+   - `this.unprocessedMessages` را `null` کن
+
+> پرامپت‌های ۱۴۲ تا ۱۴۵ از مدل sonnet4.5 به عنوان مشاور فنی گرفته شده است.

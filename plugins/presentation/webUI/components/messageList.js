@@ -4,8 +4,9 @@ export default class MessageList {
     constructor(container, lightboxManager) {
         this.container = container;
         this.lightboxManager = lightboxManager;
+        this.unprocessedMessages = new Set();
 
-        // Start loading markdown service
+        // شروع بارگذاری سرویس مارک‌داون
         markdownService.load().then(() => {
             this.rerenderUnprocessedMessages();
         });
@@ -15,6 +16,7 @@ export default class MessageList {
         if (this.container) {
             this.container.innerHTML = '';
         }
+        this.unprocessedMessages.clear();
     }
 
     renderHistory(messages) {
@@ -27,8 +29,13 @@ export default class MessageList {
     appendMessage(message) {
         if (!this.container || this.container.querySelector(`[data-id="${message.id}"]`)) return;
 
-        const { element } = this._createMessageElement(message);
+        const { element, bubble } = this._createMessageElement(message);
         this.container.appendChild(element);
+        
+        if (!markdownService.isLoaded()) {
+            this.unprocessedMessages.add(bubble);
+        }
+
         this.scrollToBottom();
     }
 
@@ -56,7 +63,7 @@ export default class MessageList {
         target.innerHTML = this._renderContent(newRaw);
         
         if (!markdownService.isLoaded()) {
-            bubble.dataset.needsMarkdown = 'true';
+            this.unprocessedMessages.add(bubble);
         }
         
         this.scrollToBottom();
@@ -93,10 +100,6 @@ export default class MessageList {
             contentDiv.className = 'content-text';
             contentDiv.innerHTML = this._renderContent(content);
             bubble.appendChild(contentDiv);
-
-            if (!markdownService.isLoaded()) {
-                bubble.dataset.needsMarkdown = 'true';
-            }
         }
 
         if (message.role === 'user' && message.image) {
@@ -161,17 +164,17 @@ export default class MessageList {
     }
 
     rerenderUnprocessedMessages() {
-        if (!markdownService.isLoaded() || !this.container) return;
+        if (!markdownService.isLoaded()) return;
 
-        const bubbles = this.container.querySelectorAll('[data-needs-markdown="true"]');
-        bubbles.forEach(bubble => {
+        // استفاده از Set برای رندر فقط پیام‌های پردازش نشده بدون کوئری زدن به DOM
+        this.unprocessedMessages.forEach(bubble => {
             const raw = bubble.dataset.raw;
             if (raw) {
                 const target = bubble.querySelector('.content-text') || bubble;
                 target.innerHTML = markdownService.render(raw);
-                delete bubble.dataset.needsMarkdown;
             }
         });
+        this.unprocessedMessages.clear();
     }
 
     scrollToBottom() {
@@ -194,5 +197,9 @@ export default class MessageList {
         this.clear();
         this.container = null;
         this.lightboxManager = null;
+        if (this.unprocessedMessages) {
+            this.unprocessedMessages.clear();
+            this.unprocessedMessages = null;
+        }
     }
 }
