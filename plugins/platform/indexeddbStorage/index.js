@@ -9,16 +9,14 @@ const SETTINGS_STORE_NAME = 'settings';
 const SETTINGS_KEY = 'user_settings';
 
 export default class IndexedDBStoragePlugin extends Plugin {
-    static get metadata() {
-        return {
-            name: 'indexeddb-storage',
-            version: '1.0.0',
-            category: 'storage',
-            description: 'ذخیره‌سازی پایدار با استفاده از IndexedDB',
-            author: 'Peik Team',
-            dependencies: []
-        };
-    }
+    static metadata = {
+        name: 'indexeddb-storage',
+        version: '1.0.0',
+        category: 'storage',
+        description: 'ذخیره‌سازی پایدار با استفاده از IndexedDB',
+        author: 'Peik Team',
+        dependencies: []
+    };
 
     constructor() {
         super();
@@ -31,7 +29,7 @@ export default class IndexedDBStoragePlugin extends Plugin {
         }
 
         this.dbPromise = new Promise((resolve, reject) => {
-            if (!window.indexedDB) {
+            if (typeof indexedDB === 'undefined') {
                 return reject(new StorageError("مرورگر شما از IndexedDB پشتیبانی نمی‌کند."));
             }
 
@@ -54,6 +52,7 @@ export default class IndexedDBStoragePlugin extends Plugin {
 
             request.onerror = (event) => {
                 console.error("خطای پایگاه داده:", event.target.error);
+                this.dbPromise = null;
                 reject(new StorageError(`خطا در باز کردن پایگاه داده: ${event.target.error?.message}`));
             };
 
@@ -63,6 +62,14 @@ export default class IndexedDBStoragePlugin extends Plugin {
         });
 
         return this.dbPromise;
+    }
+
+    async deactivate() {
+        if (this.dbPromise) {
+            const db = await this.dbPromise;
+            db.close();
+            this.dbPromise = null;
+        }
     }
 
     async saveSettings(settings) {
@@ -77,6 +84,7 @@ export default class IndexedDBStoragePlugin extends Plugin {
             return new Promise((resolve, reject) => {
                 transaction.oncomplete = () => resolve();
                 transaction.onerror = (event) => reject(new StorageError(`خطا در ذخیره تنظیمات: ${event.target.error?.message}`));
+                transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
             });
         } catch (error) {
             throw error instanceof StorageError ? error : new StorageError(error.message);
@@ -93,6 +101,7 @@ export default class IndexedDBStoragePlugin extends Plugin {
             return new Promise((resolve, reject) => {
                 request.onsuccess = () => resolve(request.result || null);
                 request.onerror = (event) => reject(new StorageError(`خطا در خواندن تنظیمات: ${event.target.error?.message}`));
+                transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
             });
         } catch (error) {
             throw error instanceof StorageError ? error : new StorageError(error.message);
@@ -111,6 +120,7 @@ export default class IndexedDBStoragePlugin extends Plugin {
             return new Promise((resolve, reject) => {
                 transaction.oncomplete = () => resolve();
                 transaction.onerror = (event) => reject(new StorageError(`خطا در ذخیره چت: ${event.target.error?.message}`));
+                transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
             });
         } catch (error) {
             throw error instanceof StorageError ? error : new StorageError(error.message);
@@ -127,6 +137,7 @@ export default class IndexedDBStoragePlugin extends Plugin {
             return new Promise((resolve, reject) => {
                 request.onsuccess = () => resolve(request.result || null);
                 request.onerror = (event) => reject(new StorageError(`خطا در بارگذاری چت: ${event.target.error?.message}`));
+                transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
             });
         } catch (error) {
             throw error instanceof StorageError ? error : new StorageError(error.message);
@@ -138,22 +149,34 @@ export default class IndexedDBStoragePlugin extends Plugin {
             const db = await this._initDB();
             const transaction = db.transaction(CHATS_STORE_NAME, 'readonly');
             const store = transaction.objectStore(CHATS_STORE_NAME);
-            const request = store.getAll();
+            
+            // استفاده از Index برای مرتب‌سازی نزولی
+            const index = store.index('updatedAt');
+            const request = index.openCursor(null, 'prev');
             
             return new Promise((resolve, reject) => {
-                request.onsuccess = () => {
-                    const chats = request.result || [];
-                    const lightChats = chats.map(chat => {
-                        const { messages, ...chatWithoutMessages } = chat;
-                        return chatWithoutMessages;
-                    });
-                    
-                    lightChats.sort((a, b) => b.updatedAt - a.updatedAt);
-                    resolve(lightChats);
+                const chats = [];
+                request.onsuccess = (event) => {
+                    const cursor = event.target.result;
+                    if (cursor) {
+                        const chat = cursor.value;
+                        // Projection: فقط فیلدهای ضروری (بدون پیام‌ها)
+                        chats.push({
+                            id: chat.id,
+                            title: chat.title,
+                            createdAt: chat.createdAt,
+                            updatedAt: chat.updatedAt,
+                            modelInfo: chat.modelInfo
+                        });
+                        cursor.continue();
+                    } else {
+                        resolve(chats);
+                    }
                 };
                 request.onerror = (event) => {
                     reject(new StorageError(`خطا در دریافت لیست چت‌ها: ${event.target.error?.message}`));
                 };
+                transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
             });
         } catch (error) {
             throw error instanceof StorageError ? error : new StorageError(error.message);
@@ -170,6 +193,7 @@ export default class IndexedDBStoragePlugin extends Plugin {
             return new Promise((resolve, reject) => {
                 transaction.oncomplete = () => resolve();
                 transaction.onerror = (event) => reject(new StorageError(`خطا در حذف چت: ${event.target.error?.message}`));
+                transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
             });
         } catch (error) {
             throw error instanceof StorageError ? error : new StorageError(error.message);

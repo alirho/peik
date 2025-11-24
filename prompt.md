@@ -1867,3 +1867,34 @@ return {
 4. محدود کردن Buffer در FetchHttp - متد streamRequest: بعد از خط `buffer += chunk`:
     - چک کن اگر `buffer.length > 100000`:
       - throw کن Error با message: `'Stream line too long'`
+
+### پرامپت ۱۵۰
+شش تغییر زیر را در `indexeddbStorage/index.js` انجام بده:
+1. اصلاح metadata، `static get metadata()` را به `static metadata = { ... }` تبدیل کن.
+2. حذف وابستگی به window، در متد `_initDB`، خط `if (!window.indexedDB)` را به این تبدیل کن:
+```
+if (typeof indexedDB === 'undefined')
+```
+3. اضافه کردن Retry به _initDB، در بلوک `request.onerror`، قبل از `reject`، این خط را اضافه کن:
+```
+this.dbPromise = null;
+```
+4. اضافه کردن متد deactivate، از متد `_initDB`، این متد را اضافه کن:
+```js
+async deactivate() {
+    if (this.dbPromise) {
+        const db = await this.dbPromise;
+        db.close();
+        this.dbPromise = null;
+    }
+}
+```
+5. اضافه کردن onabort، در تمام متدهایی که `transaction.oncomplete` دارند، بعد از `transaction.onerror`، این را اضافه کن:
+```
+transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
+```
+6. استفاده از Index در getAllChats، متد `getAllChats` را کاملاً بازنویسی کن:
+    - به جای `store.getAll()`، از `store.index('updatedAt').openCursor(null, 'prev')` استفاده کن
+    - چت‌ها را با cursor بخوان (یکی یکی)
+    - از هر کدام فقط فیلدهای لازم را بردار (بدون messages)
+    - دیگر نیازی به sort نیست (DB مرتب می‌کند)
