@@ -10,15 +10,39 @@ export default class UIManager {
         this.peik = peik;
         this.rootElement = document.getElementById(rootId);
         
+        // Components
         this.sidebar = null;
         this.messageList = null;
         this.inputArea = null;
         this.settingsModal = null;
         this.lightboxManager = null;
         
-        // مدیریت گپ فعال در لایه UI (چون هسته Stateless شده است)
-        this.activeChat = null;
-        this.activeChatListeners = {};
+        // State Management
+        this.activeChatId = null;
+        this.activeChatInstance = null; // Kept strictly for unbinding events
+
+        // Bound handlers for core events
+        this.handleReady = this.handleReady.bind(this);
+        this.handleChatCreated = this.handleChatCreated.bind(this);
+        this.handleChatUpdated = this.handleChatUpdated.bind(this);
+        this.handleChatDeleted = this.handleChatDeleted.bind(this);
+        this.handleSettingsUpdated = this.handleSettingsUpdated.bind(this);
+        this.handleCoreError = this.handleCoreError.bind(this);
+        this.handleMenuToggle = this.handleMenuToggle.bind(this);
+        this.handleNewChatClick = this.handleNewChatClick.bind(this);
+        this.handleEditSettingsClick = this.handleEditSettingsClick.bind(this);
+        this.handleModelSelectorClick = this.handleModelSelectorClick.bind(this);
+        this.handleDocumentClick = this.handleDocumentClick.bind(this);
+
+        // Bound handlers for active chat events
+        this.chatEventHandlers = {
+            'message:sent': this.handleMessageSent.bind(this),
+            'chunk': this.handleChunk.bind(this),
+            'response:complete': this.handleResponseComplete.bind(this),
+            'response:receiving': this.handleResponseReceiving.bind(this),
+            'update': this.handleActiveChatUpdate.bind(this),
+            'error': this.handleChatError.bind(this)
+        };
     }
 
     async init() {
@@ -62,90 +86,136 @@ export default class UIManager {
     }
 
     bindCoreEvents() {
-        this.peik.on('ready', ({ chats }) => {
-            this.sidebar.render(chats, null);
-            
-            if (chats.length > 0) {
-                const lastChatId = chats[0].id;
-                this.switchChat(lastChatId);
-            } else if (!this.peik.config || !this.peik.config.defaultProvider) {
-                this.settingsModal.show(true);
-            }
-        });
-
-        this.peik.on('chat:created', (chat) => {
-            this.sidebar.addChat(chat);
-            this.switchChat(chat.id);
-        });
-
-        this.peik.on('chat:updated', (chat) => {
-            this.sidebar.updateChat(chat);
-            // اگر گپِ به‌روز شده همان گپ فعال است، هدر را آپدیت کن
-            if (this.activeChat && this.activeChat.id === chat.id) {
-                this.updateHeader(chat);
-            }
-        });
-
-        this.peik.on('chat:deleted', (chatId) => {
-            this.sidebar.removeChat(chatId);
-            if (this.activeChat && this.activeChat.id === chatId) {
-                this._unbindActiveChatEvents();
-                this.activeChat = null;
-                this.messageList.clear();
-                this.updateHeader(null);
-            }
-        });
-
-        this.peik.on('settings:updated', () => {
-            alert('تنظیمات ذخیره شد.');
-            this.settingsModal.show(false);
-            if (this.activeChat) {
-                this.updateHeader(this.activeChat);
-                this.sidebar.updateChat(this.activeChat);
-            }
-        });
-        
-        this.peik.on('error', (err) => {
-            this.messageList.displayTemporaryError(err.message || err.toString());
-        });
+        this.peik.on('ready', this.handleReady);
+        this.peik.on('chat:created', this.handleChatCreated);
+        this.peik.on('chat:updated', this.handleChatUpdated);
+        this.peik.on('chat:deleted', this.handleChatDeleted);
+        this.peik.on('settings:updated', this.handleSettingsUpdated);
+        this.peik.on('error', this.handleCoreError);
     }
 
     bindGlobalEvents() {
-        this.dom.menuButton?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.querySelector('.sidebar').classList.toggle('open');
-        });
-
-        document.getElementById('new-chat-button')?.addEventListener('click', () => this.createNewChat());
-        document.getElementById('edit-settings-button')?.addEventListener('click', () => this.settingsModal.show(true));
-
-        this.dom.modelSelectorButton?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.dom.modelSelectorDropdown.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', () => {
-            if (this.dom.modelSelectorDropdown && !this.dom.modelSelectorDropdown.classList.contains('hidden')) {
-                this.dom.modelSelectorDropdown.classList.add('hidden');
-            }
-        });
+        this.dom.menuButton?.addEventListener('click', this.handleMenuToggle);
+        document.getElementById('new-chat-button')?.addEventListener('click', this.handleNewChatClick);
+        document.getElementById('edit-settings-button')?.addEventListener('click', this.handleEditSettingsClick);
+        this.dom.modelSelectorButton?.addEventListener('click', this.handleModelSelectorClick);
+        document.addEventListener('click', this.handleDocumentClick);
     }
 
-    async createNewChat() {
+    // --- Event Handlers ---
+
+    handleReady({ chats }) {
+        this.sidebar.render(chats, null);
+        if (chats.length > 0) {
+            const lastChatId = chats[0].id;
+            this.switchChat(lastChatId);
+        } else if (!this.peik.config || !this.peik.config.defaultProvider) {
+            this.settingsModal.show(true);
+        }
+    }
+
+    handleChatCreated(chat) {
+        this.sidebar.addChat(chat);
+        this.switchChat(chat.id);
+    }
+
+    handleChatUpdated(chat) {
+        this.sidebar.updateChat(chat);
+        if (this.activeChatId === chat.id) {
+            this.updateHeader(chat);
+        }
+    }
+
+    handleChatDeleted(chatId) {
+        this.sidebar.removeChat(chatId);
+        if (this.activeChatId === chatId) {
+            this._unbindActiveChatEvents();
+            this.activeChatId = null;
+            this.activeChatInstance = null;
+            this.messageList.clear();
+            this.updateHeader(null);
+        }
+    }
+
+    handleSettingsUpdated() {
+        alert('تنظیمات ذخیره شد.');
+        this.settingsModal.show(false);
+        if (this.activeChatId) {
+            this.peik.getChat(this.activeChatId).then(chat => {
+                this.updateHeader(chat);
+                this.sidebar.updateChat(chat);
+            });
+        }
+    }
+
+    handleCoreError(err) {
+        this.messageList.displayTemporaryError(err.message || err.toString());
+    }
+
+    handleMenuToggle(e) {
+        e.stopPropagation();
+        document.querySelector('.sidebar').classList.toggle('open');
+    }
+
+    async handleNewChatClick() {
         await this.peik.createChat('گپ جدید');
     }
 
+    handleEditSettingsClick() {
+        this.settingsModal.show(true);
+    }
+
+    handleModelSelectorClick(e) {
+        e.stopPropagation();
+        this.dom.modelSelectorDropdown.classList.toggle('hidden');
+    }
+
+    handleDocumentClick() {
+        if (this.dom.modelSelectorDropdown && !this.dom.modelSelectorDropdown.classList.contains('hidden')) {
+            this.dom.modelSelectorDropdown.classList.add('hidden');
+        }
+    }
+
+    // --- Active Chat Handlers ---
+
+    handleMessageSent(msg) {
+        this.messageList.appendMessage(msg);
+    }
+
+    handleChunk({ messageId, chunk }) {
+        this.messageList.appendChunk(messageId, chunk);
+    }
+
+    handleResponseComplete() {
+        this.inputArea.setLoading(false);
+    }
+
+    handleResponseReceiving() {
+        this.inputArea.setLoading(true);
+    }
+
+    handleActiveChatUpdate(updatedChat) {
+        this.updateHeader(updatedChat);
+        this.sidebar.updateChat(updatedChat);
+    }
+
+    handleChatError(err) {
+        this.inputArea.setLoading(false);
+        this.messageList.displayTemporaryError(err.message || 'خطا در گپ');
+    }
+
+    // --- Logic ---
+
     async switchChat(chatId) {
-        // اگر گپ درخواستی همین الان فعال است، کاری نکن
-        if (this.activeChat && this.activeChat.id === chatId) return;
+        if (this.activeChatId === chatId) return;
 
         const chat = await this.peik.getChat(chatId);
         if (!chat) return;
 
         this._unbindActiveChatEvents();
 
-        // ذخیره گپ فعال در UIManager
-        this.activeChat = chat;
+        this.activeChatId = chatId;
+        this.activeChatInstance = chat;
 
         this.sidebar.setActive(chatId);
         this.messageList.renderHistory(chat.messages);
@@ -228,36 +298,47 @@ export default class UIManager {
     }
 
     _bindActiveChatEvents(chat) {
-        const onMessage = (msg) => this.messageList.appendMessage(msg);
-        const onChunk = ({ messageId, chunk }) => this.messageList.appendChunk(messageId, chunk);
-        const onComplete = () => this.inputArea.setLoading(false);
-        const onReceiving = () => this.inputArea.setLoading(true);
-        const onUpdate = (updatedChat) => {
-            this.updateHeader(updatedChat);
-            this.sidebar.updateChat(updatedChat);
-        };
-        const onError = (err) => {
-            this.inputArea.setLoading(false);
-            this.messageList.displayTemporaryError(err.message || 'خطا در گپ');
-        };
-
-        this.activeChatListeners = {
-            'message:sent': onMessage,
-            chunk: onChunk,
-            'response:complete': onComplete,
-            'response:receiving': onReceiving,
-            update: onUpdate,
-            error: onError
-        };
-
-        Object.entries(this.activeChatListeners).forEach(([evt, fn]) => chat.on(evt, fn));
+        Object.entries(this.chatEventHandlers).forEach(([evt, fn]) => chat.on(evt, fn));
     }
 
     _unbindActiveChatEvents() {
-        const chat = this.activeChat;
-        if (!chat || !this.activeChatListeners['message:sent']) return;
+        const chat = this.activeChatInstance;
+        if (!chat) return;
 
-        Object.entries(this.activeChatListeners).forEach(([evt, fn]) => chat.off(evt, fn));
-        this.activeChatListeners = {};
+        Object.entries(this.chatEventHandlers).forEach(([evt, fn]) => chat.off(evt, fn));
+    }
+
+    destroy() {
+        // 1. Remove global DOM listeners
+        this.dom.menuButton?.removeEventListener('click', this.handleMenuToggle);
+        document.getElementById('new-chat-button')?.removeEventListener('click', this.handleNewChatClick);
+        document.getElementById('edit-settings-button')?.removeEventListener('click', this.handleEditSettingsClick);
+        this.dom.modelSelectorButton?.removeEventListener('click', this.handleModelSelectorClick);
+        document.removeEventListener('click', this.handleDocumentClick);
+
+        // 2. Remove core event listeners
+        this.peik.off('ready', this.handleReady);
+        this.peik.off('chat:created', this.handleChatCreated);
+        this.peik.off('chat:updated', this.handleChatUpdated);
+        this.peik.off('chat:deleted', this.handleChatDeleted);
+        this.peik.off('settings:updated', this.handleSettingsUpdated);
+        this.peik.off('error', this.handleCoreError);
+
+        // 3. Remove active chat listeners
+        this._unbindActiveChatEvents();
+
+        // 4. Destroy child components
+        if (this.sidebar) this.sidebar.destroy();
+        if (this.messageList) this.messageList.destroy();
+        if (this.inputArea) this.inputArea.destroy();
+        if (this.settingsModal) this.settingsModal.destroy();
+        if (this.lightboxManager) this.lightboxManager.destroy();
+
+        // 5. Clear references
+        this.peik = null;
+        this.rootElement.innerHTML = '';
+        this.rootElement = null;
+        this.dom = null;
+        this.activeChatInstance = null;
     }
 }
