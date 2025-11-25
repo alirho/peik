@@ -36,20 +36,26 @@ export default class InputArea extends Component {
     }
 
     onChatChanged(newChat, oldChat) {
+        // قطع اتصال از چت قبلی
         if (oldChat) {
             oldChat.off('response:receiving', this.handleResponseReceiving);
             oldChat.off('response:complete', this.handleResponseComplete);
             oldChat.off('error', this.handleChatError);
         }
 
+        // نگهداری رفرنس به چت جدید
         this.activeChat = newChat;
 
+        // اتصال به چت جدید
         if (newChat) {
             newChat.on('response:receiving', this.handleResponseReceiving);
             newChat.on('response:complete', this.handleResponseComplete);
             newChat.on('error', this.handleChatError);
-            // اگر چت در حال ارسال است، وضعیت لودینگ را تنظیم کن (با استفاده از Runtime State اگر در دسترس باشد)
-            // فعلاً فرض بر این است که هنگام سوییچ وضعیت ریست می‌شود یا از طریق رویداد دریافت می‌شود.
+            
+            // بررسی وضعیت فعلی چت (برای زمانی که سوییچ می‌کنیم و چت در حال فعالیت است)
+            // نکته: این بخش نیاز به دسترسی به Runtime State دارد که در نسخه جدید در ChatManager است
+            // اما چون UI فقط به رویدادها واکنش نشان می‌دهد، فعلاً false می‌گذاریم.
+            // اگر بخواهیم دقیق‌تر باشیم، Chat باید متد isSending() داشته باشد.
             this.setLoading(false);
         } else {
             this.setLoading(false);
@@ -93,7 +99,10 @@ export default class InputArea extends Component {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            this.uiManager.getComponent('dialog').alert('لطفاً فقط فایل تصویر انتخاب کنید.');
+            // استفاده از DialogManager اگر در دسترس باشد، وگرنه alert
+            const dialog = this.uiManager.getComponent('dialog');
+            if (dialog) dialog.alert('لطفاً فقط فایل تصویر انتخاب کنید.');
+            else alert('لطفاً فقط فایل تصویر انتخاب کنید.');
             return;
         }
 
@@ -140,17 +149,13 @@ export default class InputArea extends Component {
         
         if (!text && !this.currentImage) return;
 
-        // استفاده از activeChatId موجود در UIManager
-        const chatId = this.uiManager.activeChatId;
-        
-        if (!chatId) {
-            this.uiManager.getComponent('dialog').alert('لطفاً ابتدا یک گپ ایجاد کنید.');
+        // اصلاح مهم: استفاده از this.activeChat به جای درخواست چت جدید از هسته
+        if (!this.activeChat) {
+            const dialog = this.uiManager.getComponent('dialog');
+            if (dialog) await dialog.alert('لطفاً ابتدا یک گپ ایجاد کنید.');
+            else alert('لطفاً ابتدا یک گپ ایجاد کنید.');
             return;
         }
-
-        // دریافت شیء گپ از هسته
-        const chat = await this.peik.getChat(chatId);
-        if (!chat) return;
 
         const msgText = text;
         const msgImage = this.currentImage;
@@ -159,10 +164,14 @@ export default class InputArea extends Component {
         this.clearImage();
         
         try {
-            await chat.sendMessage(msgText, msgImage);
+            // ارسال با استفاده از همان نمونه‌ای که MessageList به آن گوش می‌دهد
+            await this.activeChat.sendMessage(msgText, msgImage);
         } catch (err) {
-            console.error(err);
+            console.error('Send failed:', err);
             this.input.value = msgText; // بازگرداندن متن در صورت خطا
+            
+            // نمایش خطا (اختیاری، چون MessageList هم به رویداد error گوش می‌دهد)
+            // اما اگر خطا قبل از emit رخ دهد (مثلاً در validation)، اینجا مفید است
         }
     }
 
@@ -177,17 +186,20 @@ export default class InputArea extends Component {
             this.attachBtn.disabled = isLoading;
         }
         if (this.input) {
-            this.input.disabled = isLoading;
+            // اختیاری: غیرفعال کردن ورودی هنگام ارسال
+            // this.input.disabled = isLoading;
         }
     }
 
     destroy() {
+        // پاکسازی Listener های چت فعال
         if (this.activeChat) {
             this.activeChat.off('response:receiving', this.handleResponseReceiving);
             this.activeChat.off('response:complete', this.handleResponseComplete);
             this.activeChat.off('error', this.handleChatError);
         }
 
+        // پاکسازی Listener های DOM
         if (this.form) this.form.removeEventListener('submit', this.handleSubmit);
         if (this.input) this.input.removeEventListener('keydown', this.handleKeyDown);
         if (this.attachBtn) this.attachBtn.removeEventListener('click', this.handleAttachClick);
@@ -199,5 +211,6 @@ export default class InputArea extends Component {
         this.attachBtn = null;
         this.fileInput = null;
         this.previewContainer = null;
+        this.activeChat = null;
     }
 }

@@ -2065,3 +2065,24 @@ transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
 
 ### پرامپت ۱۶۰
 در نخستین راه‌اندازی پروژه، دکمه مدیریت کلیدها کار نمی‌کنه.
+
+### پرامپت ۱۶۱
+با نوشتن پیام و زدن دکمه اینتر یا ارسال، پیامی فرستاده نمی‌شه و پس از بازنشانی (refresh) صفحه پیام زیر در کنسول مرورگر نمایش داده می‌شه:
+
+```js
+خطا در ارسال پیام: ProviderError: Stream reading failed: Error in input stream
+    PeikError http://localhost:3000/core/src/utils/errors.js:6
+    ProviderError http://localhost:3000/core/src/utils/errors.js:33
+    sendMessage http://localhost:3000/plugins/core/customProvider/index.js:79
+    sendMessage http://localhost:3000/core/src/chat.js:112
+    sendMessage http://localhost:3000/plugins/presentation/webUI/components/inputArea.js:162
+    handleKeyDown http://localhost:3000/plugins/presentation/webUI/components/inputArea.js:79
+    bindEvents http://localhost:3000/plugins/presentation/webUI/components/inputArea.js:33
+    init http://localhost:3000/plugins/presentation/webUI/components/inputArea.js:28
+    init http://localhost:3000/plugins/presentation/webUI/uiManager.js:36
+    activate http://localhost:3000/plugins/presentation/webUI/index.js:27
+    register http://localhost:3000/core/src/pluginManager.js:35
+    use http://localhost:3000/core/src/peik.js:34
+    <anonymous> http://localhost:3000/:45
+    async* http://localhost:3000/:64
+```
