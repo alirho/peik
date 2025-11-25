@@ -23,7 +23,7 @@ export default class UIManager {
         await this.renderLayout();
         
         // ثبت کامپوننت‌ها
-        this.registerComponent('dialog', new DialogManager(this.peik, this));
+        this.registerComponent('dialog', new DialogManager(this.peik, this)); // باید زودتر از بقیه ثبت شود
         this.registerComponent('lightbox', new LightboxManager(this.peik, this));
         this.registerComponent('header', new Header(this.peik, this));
         this.registerComponent('sidebar', new Sidebar(this.peik, this));
@@ -41,11 +41,12 @@ export default class UIManager {
     }
 
     async renderLayout() {
+        // لاگ اضافه شده برای دیباگ
+        console.log('🎨 RENDERING LAYOUT...');
+        
         const root = document.getElementById(this.rootElementId);
         if (!root) throw new Error(`المان ریشه با شناسه ${this.rootElementId} یافت نشد.`);
 
-        // بارگذاری همزمان لی‌اوت اصلی و مودال تنظیمات
-        // نکته: mainLayout شامل partial های header, sidebar, chatArea, inputArea, modals, lightbox است
         const [layoutHtml, settingsHtml] = await Promise.all([
             loadTemplateWithPartials('plugins/presentation/webUI/templates/mainLayout.html'),
             loadTemplate('plugins/presentation/webUI/templates/settingsModal.html')
@@ -64,6 +65,13 @@ export default class UIManager {
     }
 
     handleReady({ chats }) {
+        // ۱. رندر کردن سایدبار با لیست چت‌ها (اضافه شده)
+        const sidebar = this.getComponent('sidebar');
+        if (sidebar) {
+            sidebar.render(chats, null);
+        }
+
+        // ۲. منطق سوییچ چت
         if (chats.length > 0) {
             this.switchChat(chats[0].id);
         } else if (!this.peik.config?.defaultProvider) {
