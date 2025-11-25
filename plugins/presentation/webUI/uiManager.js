@@ -23,13 +23,13 @@ export default class UIManager {
         await this.renderLayout();
         
         // ثبت کامپوننت‌ها
-        this.registerComponent('dialog', new DialogManager(this.peik, this)); // باید زودتر از بقیه ثبت شود
+        this.registerComponent('dialog', new DialogManager(this.peik, this));
         this.registerComponent('lightbox', new LightboxManager(this.peik, this));
+        this.registerComponent('header', new Header(this.peik, this));
         this.registerComponent('sidebar', new Sidebar(this.peik, this));
         this.registerComponent('messageList', new MessageList(this.peik, this));
         this.registerComponent('inputArea', new InputArea(this.peik, this));
         this.registerComponent('settingsModal', new SettingsModal(this.peik, this));
-        this.registerComponent('header', new Header(this.peik, this));
 
         // راه‌اندازی کامپوننت‌ها
         for (const component of this.components.values()) {
@@ -44,12 +44,14 @@ export default class UIManager {
         const root = document.getElementById(this.rootElementId);
         if (!root) throw new Error(`المان ریشه با شناسه ${this.rootElementId} یافت نشد.`);
 
+        // بارگذاری همزمان لی‌اوت اصلی و مودال تنظیمات
+        // نکته: mainLayout شامل partial های header, sidebar, chatArea, inputArea, modals, lightbox است
         const [layoutHtml, settingsHtml] = await Promise.all([
             loadTemplateWithPartials('plugins/presentation/webUI/templates/mainLayout.html'),
             loadTemplate('plugins/presentation/webUI/templates/settingsModal.html')
         ]);
         
-        // الحاق لی‌اوت اصلی (که شامل دیالوگ‌های عمومی است) و مودال تنظیمات
+        // الحاق لی‌اوت اصلی و مودال تنظیمات
         root.innerHTML = layoutHtml + settingsHtml;
     }
 
@@ -62,7 +64,6 @@ export default class UIManager {
     }
 
     handleReady({ chats }) {
-        // منطق اولیه: اگر گپی هست باز کن، اگر نه تنظیمات
         if (chats.length > 0) {
             this.switchChat(chats[0].id);
         } else if (!this.peik.config?.defaultProvider) {
@@ -80,16 +81,10 @@ export default class UIManager {
         const newChat = await this.peik.getChat(chatId);
         if (!newChat) return;
 
-        const oldChatId = this.activeChatId;
-        // نکته: در اینجا ما Chat Instance قدیمی را نداریم (چون peik آن را کش نمی‌کند در نسخه فعلی)
-        // اما کامپوننت‌ها ممکن است خودشان نگه داشته باشند. ما فقط ID قدیمی را می‌دانیم.
-        // برای سادگی، فرض می‌کنیم کامپوننت‌ها مسئولیت پاکسازی خود را دارند.
-        
         this.activeChatId = chatId;
 
         // اطلاع‌رسانی به تمام کامپوننت‌ها
         for (const component of this.components.values()) {
-            // پاس دادن null به عنوان oldChat چون دسترسی مستقیم نداریم (یا مهم نیست)
             component.onChatChanged(newChat, null);
         }
 
