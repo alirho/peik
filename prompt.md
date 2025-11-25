@@ -2051,3 +2051,14 @@ transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
     <anonymous> http://127.0.0.1:8000/:45
     async* http://127.0.0.1:8000/:64
 ```
+
+### پرامپت ۱۵۹
+لطفاً سیستم دیالوگ‌های پیش‌فرض مرورگر (`alert`, `confirm`, `prompt`) را با یک سیستم دیالوگ سفارشی و مدرن جایگزین کن.
+1. یک کامپوننت جدید به نام `DialogManager` بساز که:
+    - متدهای `alert(message)`, `confirm(message)` و `prompt(message, defaultValue)` را پیاده‌سازی کن.
+    - این متدها باید `Promise` برگردانند تا بتوان از `await` استفاده کرد (دقیقاً مثل رفتار همزمان مرورگر، اما غیرمسدودکننده).
+    - از HTML/CSS موجود پروژه (مثل `confirmation-modal`) برای نمایش دیالوگ‌ها استفاده کن تا با تم تاریک/روشن هماهنگ باشه.
+2. در فایل `UIManager`، این کامپوننت را ثبت و راه‌اندازی کن.
+3. در تمام فایل‌های دیگه (`sidebar.js`, `inputArea.js`, `settingsModal.js`)، هر جا از `window.alert` یا `confirm` یا `prompt` استفاده شده، آن را با فراخوانی متد معادل از `DialogManager` جایگزین کن.
+
+هدف این است که هیچ دیالوگ بومی مرورگری در برنامه دیده نشه.

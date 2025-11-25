@@ -4,6 +4,7 @@ import InputArea from './components/inputArea.js';
 import SettingsModal from './components/settingsModal.js';
 import LightboxManager from './components/lightboxManager.js';
 import Header from './components/header.js';
+import DialogManager from './components/dialogManager.js';
 import { loadTemplateWithPartials } from './utils/templateLoader.js';
 
 export default class UIManager {
@@ -22,6 +23,7 @@ export default class UIManager {
         await this.renderLayout();
         
         // ثبت کامپوننت‌ها
+        this.registerComponent('dialog', new DialogManager(this.peik, this)); // باید زودتر از بقیه ثبت شود
         this.registerComponent('lightbox', new LightboxManager(this.peik, this));
         this.registerComponent('sidebar', new Sidebar(this.peik, this));
         this.registerComponent('messageList', new MessageList(this.peik, this));
@@ -44,9 +46,16 @@ export default class UIManager {
 
         const [layoutHtml, modalHtml] = await Promise.all([
             loadTemplateWithPartials('plugins/presentation/webUI/templates/mainLayout.html'),
-            loadTemplateWithPartials('plugins/presentation/webUI/templates/settingsModal.html')
+            loadTemplateWithPartials('plugins/presentation/webUI/templates/partials/modals.html') // لود مستقیم فایل مودال‌ها
         ]);
-        root.innerHTML = layoutHtml + modalHtml;
+        
+        // ترکیب layout و modals
+        // نکته: در templateLoader قبلی، modals.html به عنوان partial داخل mainLayout لود می‌شد.
+        // اگر mainLayout شامل {{> modals }} است، نیازی به لود جداگانه و الحاق نیست.
+        // اما برای اطمینان از اینکه modals حتما وجود دارد، محتوای آن را به انتهای body اضافه می‌کنیم.
+        // چون mainLayout احتمالا {{> modals }} دارد، اینجا فقط layoutHtml را ست می‌کنیم.
+        // اما برای اطمینان از لود شدن generic-dialog جدید که در modals.html است:
+        root.innerHTML = layoutHtml;
     }
 
     registerComponent(name, instance) {

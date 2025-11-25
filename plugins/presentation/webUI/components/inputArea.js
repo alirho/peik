@@ -93,7 +93,7 @@ export default class InputArea extends Component {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            alert('لطفاً فقط فایل تصویر انتخاب کنید.');
+            this.uiManager.getComponent('dialog').alert('لطفاً فقط فایل تصویر انتخاب کنید.');
             return;
         }
 
@@ -140,10 +140,17 @@ export default class InputArea extends Component {
         
         if (!text && !this.currentImage) return;
 
-        if (!this.activeChat) {
-            alert('لطفاً ابتدا یک گپ ایجاد کنید.');
+        // استفاده از activeChatId موجود در UIManager
+        const chatId = this.uiManager.activeChatId;
+        
+        if (!chatId) {
+            this.uiManager.getComponent('dialog').alert('لطفاً ابتدا یک گپ ایجاد کنید.');
             return;
         }
+
+        // دریافت شیء گپ از هسته
+        const chat = await this.peik.getChat(chatId);
+        if (!chat) return;
 
         const msgText = text;
         const msgImage = this.currentImage;
@@ -152,7 +159,7 @@ export default class InputArea extends Component {
         this.clearImage();
         
         try {
-            await this.activeChat.sendMessage(msgText, msgImage);
+            await chat.sendMessage(msgText, msgImage);
         } catch (err) {
             console.error(err);
             this.input.value = msgText; // بازگرداندن متن در صورت خطا

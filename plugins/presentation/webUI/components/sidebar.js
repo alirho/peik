@@ -74,8 +74,9 @@ export default class Sidebar extends Component {
         }
     }
 
-    handleContainerClick(e) {
+    async handleContainerClick(e) {
         const target = e.target;
+        const dialog = this.uiManager.getComponent('dialog');
 
         // سوییچ چت
         const chatItem = target.closest('.chat-list-item');
@@ -107,7 +108,8 @@ export default class Sidebar extends Component {
             const chatId = chatItem.dataset.id;
             const currentTitle = chatItem.querySelector('.chat-title').textContent;
             
-            const newTitle = prompt('نام جدید گپ را وارد کنید:', currentTitle);
+            // جایگزینی prompt بومی
+            const newTitle = await dialog.prompt('نام جدید گپ را وارد کنید:', currentTitle);
             if (newTitle && newTitle.trim() !== '') {
                 this.peik.renameChat(chatId, newTitle.trim());
             }
@@ -123,7 +125,9 @@ export default class Sidebar extends Component {
             const chatId = chatItem.dataset.id;
             const currentTitle = chatItem.querySelector('.chat-title').textContent;
 
-            if (confirm(`آیا از حذف گپ «${currentTitle}» مطمئن هستید؟`)) {
+            // جایگزینی confirm بومی
+            const confirmed = await dialog.confirm(`آیا از حذف گپ «${currentTitle}» مطمئن هستید؟`);
+            if (confirmed) {
                 this.peik.deleteChat(chatId);
             }
             return;
@@ -135,10 +139,6 @@ export default class Sidebar extends Component {
     }
 
     handleSettingsClick() {
-        // فرض بر این است که SettingsModal به عنوان کامپوننت ثبت شده است
-        // یا UIManager متدی برای باز کردن آن دارد.
-        // راه حل تمیزتر: SettingsModal رویداد DOM را خودش هندل کند یا UIManager باز کند.
-        // اینجا ما از متد عمومی UIManager استفاده می‌کنیم اگر وجود داشته باشد، یا مستقیم DOM
         const settingsModal = this.uiManager.getComponent('settingsModal');
         if (settingsModal) settingsModal.show(true);
     }

@@ -370,7 +370,12 @@ html.dark .security-notice-list {
 
 /* Confirmation Modal z-index fix */
 #confirmation-modal {
-    z-index: 1100; /* Higher than settings modal to appear on top */
+    z-index: 1100; 
+}
+
+/* Generic Dialog z-index (Must be higher than Settings Modal and Lightbox) */
+#generic-dialog {
+    z-index: 2100;
 }
 
 

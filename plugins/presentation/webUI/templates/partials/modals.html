@@ -1,4 +1,4 @@
-<!-- Generic Confirmation Modal -->
+<!-- Generic Confirmation Modal (Deprecated - kept for backward compat if needed, but DialogManager uses generic-dialog) -->
 <div id="confirmation-modal" class="modal-overlay hidden">
     <div class="modal-content" style="max-width: 28rem;">
         <header class="modal-header">
@@ -8,6 +8,27 @@
         <footer class="actions-container" style="padding: 0 1.5rem 1.5rem; margin-top: 0; border-top: none;">
             <button type="button" class="btn btn-secondary" id="confirmation-modal-cancel">لغو</button>
             <button type="button" class="btn btn-primary" id="confirmation-modal-confirm">تایید</button>
+        </footer>
+    </div>
+</div>
+
+<!-- Unified Generic Dialog (Alert, Confirm, Prompt) -->
+<div id="generic-dialog" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 28rem;">
+        <header class="modal-header">
+            <h3 id="generic-dialog-title" class="header-text">پیام</h3>
+        </header>
+        <main class="modal-main-content" style="padding: 1.5rem;">
+            <p id="generic-dialog-message" style="margin-bottom: 1rem; line-height: 1.6;"></p>
+            
+            <!-- Input container for Prompt dialogs -->
+            <div id="generic-dialog-input-container" class="hidden">
+                <input type="text" id="generic-dialog-input" class="form-input" style="width: 100%;">
+            </div>
+        </main>
+        <footer class="actions-container" style="padding: 0 1.5rem 1.5rem; margin-top: 0; border-top: none;">
+            <button type="button" class="btn btn-secondary" id="generic-dialog-cancel">لغو</button>
+            <button type="button" class="btn btn-primary" id="generic-dialog-confirm">تایید</button>
         </footer>
     </div>
 </div>

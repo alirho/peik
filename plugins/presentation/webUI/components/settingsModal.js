@@ -21,13 +21,15 @@ export default class SettingsModal extends Component {
 
         this.handleSave = async (e) => {
             e.preventDefault();
-            const settings = this.getSettingsFromForm();
+            const dialog = this.uiManager.getComponent('dialog');
+            
+            const settings = await this.getSettingsFromForm(); // اکنون async است چون alert ممکن است داشته باشد
             if (!settings) return;
             
             if (this.sessionOnlyCheckbox && this.sessionOnlyCheckbox.checked) {
                 this.peik.settings = settings;
                 this.show(false);
-                alert('تنظیمات موقت ذخیره شد.');
+                await dialog.alert('تنظیمات موقت ذخیره شد.');
             } else {
                 await this.peik.updateSettings(settings);
             }
@@ -75,18 +77,10 @@ export default class SettingsModal extends Component {
             }
         };
 
-        this.hideConfirmationModal = () => {
-            this.confirmationModal?.classList.add('hidden');
-            this.confirmHandler = null;
-        };
-
-        this.handleConfirm = () => {
-            if (this.confirmHandler) this.confirmHandler();
-            this.hideConfirmationModal();
-        };
-
         this.handleSettingsUpdated = () => {
-            alert('تنظیمات ذخیره شد.');
+            const dialog = this.uiManager.getComponent('dialog');
+            // این متد alert برمی‌گرداند اما نیازی به await نداریم چون آخرین مرحله است
+            dialog.alert('تنظیمات ذخیره شد.');
             this.show(false);
         };
         
@@ -120,11 +114,7 @@ export default class SettingsModal extends Component {
 
         this.sessionOnlyCheckbox = document.getElementById('session-only-checkbox');
         
-        this.confirmationModal = document.getElementById('confirmation-modal');
-        this.confirmationModalTitle = document.getElementById('confirmation-modal-title');
-        this.confirmationModalBody = document.getElementById('confirmation-modal-body');
-        this.confirmationModalCancel = document.getElementById('confirmation-modal-cancel');
-        this.confirmationModalConfirm = document.getElementById('confirmation-modal-confirm');
+        // مودال داخلی تأیید دیگر استفاده نمی‌شود
     }
 
     bindEvents() {
@@ -146,9 +136,6 @@ export default class SettingsModal extends Component {
             this.customProviderList.addEventListener('input', this.handleCustomListInput);
             this.customProviderList.addEventListener('input', this.handleCustomInputValidation);
         }
-
-        if (this.confirmationModalCancel) this.confirmationModalCancel.addEventListener('click', this.hideConfirmationModal);
-        if (this.confirmationModalConfirm) this.confirmationModalConfirm.addEventListener('click', this.handleConfirm);
     }
 
     validateField(inputElement, validatorFn) {
@@ -173,16 +160,17 @@ export default class SettingsModal extends Component {
         return true;
     }
 
-    handleDeleteCustomProvider(itemElement) {
+    async handleDeleteCustomProvider(itemElement) {
         if (!itemElement) return;
         const name = itemElement.querySelector('.custom-provider-title')?.textContent || 'این پیکربندی';
-        this.showConfirmationModal({
-            title: 'حذف پیکربندی',
-            bodyHtml: `<p>آیا از حذف پیکربندی «<strong>${name}</strong>» مطمئن هستید؟</p>`,
-            confirmText: 'حذف',
-            confirmClass: 'btn-danger',
-            onConfirm: () => itemElement.remove()
-        });
+        
+        // استفاده از DialogManager به جای مودال داخلی
+        const dialog = this.uiManager.getComponent('dialog');
+        const confirmed = await dialog.confirm(`آیا از حذف پیکربندی «${name}» مطمئن هستید؟`);
+        
+        if (confirmed) {
+            itemElement.remove();
+        }
     }
 
     renderCustomProvider(providerData = {}, open = false) {
@@ -233,8 +221,10 @@ export default class SettingsModal extends Component {
         if (activeRadio) activeRadio.checked = true;
     }
 
-    getSettingsFromForm() {
+    async getSettingsFromForm() {
         if (!this.form) return null;
+        const dialog = this.uiManager.getComponent('dialog');
+
         const newSettings = {
             activeProviderId: null,
             providers: {
@@ -253,7 +243,7 @@ export default class SettingsModal extends Component {
         const activeRadio = this.form.querySelector('input[name="active_provider"]:checked');
         if (!activeRadio) {
             if (this.peik.config?.defaultProvider) return newSettings;
-            alert('لطفاً یک ارائه‌دهنده انتخاب کنید.');
+            await dialog.alert('لطفاً یک ارائه‌دهنده انتخاب کنید.');
             return null;
         }
         newSettings.activeProviderId = activeRadio.value;
@@ -261,7 +251,7 @@ export default class SettingsModal extends Component {
         const id = newSettings.activeProviderId;
         if ((id === 'gemini' && !newSettings.providers.gemini.apiKey) || 
             (id === 'openai' && !newSettings.providers.openai.apiKey)) {
-            alert('اطلاعات ارائه‌دهنده انتخاب شده ناقص است.');
+            await dialog.alert('اطلاعات ارائه‌دهنده انتخاب شده ناقص است.');
             return null;
         }
         return newSettings;
@@ -277,16 +267,6 @@ export default class SettingsModal extends Component {
             input.type = 'password';
             if (icon) icon.textContent = 'visibility';
         }
-    }
-
-    showConfirmationModal({ title, bodyHtml, confirmText, confirmClass, onConfirm }) {
-        if (!this.confirmationModal) return;
-        this.confirmationModalTitle.textContent = title;
-        this.confirmationModalBody.innerHTML = bodyHtml;
-        this.confirmationModalConfirm.textContent = confirmText;
-        this.confirmationModalConfirm.className = `btn ${confirmClass}`;
-        this.confirmHandler = onConfirm;
-        this.confirmationModal.classList.remove('hidden');
     }
 
     destroy() {
@@ -309,8 +289,7 @@ export default class SettingsModal extends Component {
             this.customProviderList.removeEventListener('input', this.handleCustomInputValidation);
         }
 
-        if (this.confirmationModalCancel) this.confirmationModalCancel.removeEventListener('click', this.hideConfirmationModal);
-        if (this.confirmationModalConfirm) this.confirmationModalConfirm.removeEventListener('click', this.handleConfirm);
+        // مودال تایید داخلی حذف شده است
 
         this.peik.off('settings:updated', this.handleSettingsUpdated);
         
