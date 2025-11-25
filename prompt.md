@@ -2062,3 +2062,6 @@ transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
 3. در تمام فایل‌های دیگه (`sidebar.js`, `inputArea.js`, `settingsModal.js`)، هر جا از `window.alert` یا `confirm` یا `prompt` استفاده شده، آن را با فراخوانی متد معادل از `DialogManager` جایگزین کن.
 
 هدف این است که هیچ دیالوگ بومی مرورگری در برنامه دیده نشه.
+
+### پرامپت ۱۶۰
+در نخستین راه‌اندازی پروژه، دکمه مدیریت کلیدها کار نمی‌کنه.

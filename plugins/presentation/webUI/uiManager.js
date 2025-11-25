@@ -5,7 +5,7 @@ import SettingsModal from './components/settingsModal.js';
 import LightboxManager from './components/lightboxManager.js';
 import Header from './components/header.js';
 import DialogManager from './components/dialogManager.js';
-import { loadTemplateWithPartials } from './utils/templateLoader.js';
+import { loadTemplateWithPartials, loadTemplate } from './utils/templateLoader.js';
 
 export default class UIManager {
     constructor(peik, rootId) {
@@ -44,18 +44,13 @@ export default class UIManager {
         const root = document.getElementById(this.rootElementId);
         if (!root) throw new Error(`المان ریشه با شناسه ${this.rootElementId} یافت نشد.`);
 
-        const [layoutHtml, modalHtml] = await Promise.all([
+        const [layoutHtml, settingsHtml] = await Promise.all([
             loadTemplateWithPartials('plugins/presentation/webUI/templates/mainLayout.html'),
-            loadTemplateWithPartials('plugins/presentation/webUI/templates/partials/modals.html') // لود مستقیم فایل مودال‌ها
+            loadTemplate('plugins/presentation/webUI/templates/settingsModal.html')
         ]);
         
-        // ترکیب layout و modals
-        // نکته: در templateLoader قبلی، modals.html به عنوان partial داخل mainLayout لود می‌شد.
-        // اگر mainLayout شامل {{> modals }} است، نیازی به لود جداگانه و الحاق نیست.
-        // اما برای اطمینان از اینکه modals حتما وجود دارد، محتوای آن را به انتهای body اضافه می‌کنیم.
-        // چون mainLayout احتمالا {{> modals }} دارد، اینجا فقط layoutHtml را ست می‌کنیم.
-        // اما برای اطمینان از لود شدن generic-dialog جدید که در modals.html است:
-        root.innerHTML = layoutHtml;
+        // الحاق لی‌اوت اصلی (که شامل دیالوگ‌های عمومی است) و مودال تنظیمات
+        root.innerHTML = layoutHtml + settingsHtml;
     }
 
     registerComponent(name, instance) {
