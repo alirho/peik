@@ -2086,3 +2086,6 @@ transaction.onabort = () => reject(new StorageError('Transaction was aborted'));
     <anonymous> http://localhost:3000/:45
     async* http://localhost:3000/:64
 ```
+
+### پرامپت ۱۶۲
+لیست پیام‌ها در پنل سمت راست نمایش داده نمی‌شه.
